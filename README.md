@@ -1,5 +1,5 @@
 # UCP-Paper V2
-IEEE 57-system benchmarking data (incl. explanation of data format)≈ used from https://labs.ece.uw.edu/pstca/
+IEEE 57-system benchmarking data (incl. explanation of data format) taken from https://labs.ece.uw.edu/pstca/
 
 ### paper_results.ipynb
 Contains main findings / Plots of paper and shows how to use the attached python files
