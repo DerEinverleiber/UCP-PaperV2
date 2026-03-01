@@ -19,10 +19,10 @@ class PowerGrid(): # rough outline
         self.busses = busses
         self.branches = branches
         self.n = len(busses) # Number of Busses
-        edges = [(branch.from_bus, branch.to_bus) for branch in branches]
+        edges = [(branch.from_bus-1, branch.to_bus-1) for branch in branches] # switch to 0-indexing
         rows, cols = zip(*edges)
         susceptances = [1/(branch.reactance) for branch in branches] # Assuming small resistances
-        graph = csr_matrix((susceptances, (rows, cols)), shape=(self.n+1, self.n+1))  # Undirected Graph with weights corresponding to susceptances 
+        graph = csr_matrix((susceptances, (rows, cols)), shape=(self.n, self.n))  # Undirected Graph with weights corresponding to susceptances 
         self.graph = graph + graph.T
         diag = np.array(self.graph.sum(axis=1)).flatten()
         self.B = csr_matrix(np.diag(diag)- self.graph) # Suscepibility Matrix
@@ -65,7 +65,8 @@ class PowerGrid(): # rough outline
         pass
 
 
-    def loss_function(costs) -> np.float64:
-        pass
+    def loss_function(costs: list[float]) -> float:
+        assert len(costs) == len()
+        
 
         
