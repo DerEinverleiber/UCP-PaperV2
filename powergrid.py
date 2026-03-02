@@ -1,33 +1,32 @@
 import numpy as np
 from dataclasses import dataclass
 from scipy.sparse import csr_matrix
-from scipy.sparse import csgraph
+from scipy.sparse import diags
+from scipy.sparse.linalg import spsolve
 
 @dataclass 
 class Bus:
     idx: int
     load: float
     generation: float
+ 
 @dataclass 
 class Branch:
     from_bus: int
     to_bus: int
     reactance: float
 
-class PowerGrid(): # rough outline 
-    def __init__(self, busses: list[Bus], branches: list[Branch]): 
+class PowerGrid(): 
+    def __init__(self, busses: list[Bus], branches: list[Branch], reference_bus_id: int = 0): 
         self.busses = busses
         self.branches = branches
-        self.n = len(busses) # Number of Busses
-        edges = [(branch.from_bus-1, branch.to_bus-1) for branch in branches] # switch to 0-indexing
-        rows, cols = zip(*edges)
-        susceptances = [1/(branch.reactance) for branch in branches] # Assuming small resistances
-        graph = csr_matrix((susceptances, (rows, cols)), shape=(self.n, self.n))  # Undirected Graph with weights corresponding to susceptances 
-        self.graph = graph + graph.T
+        self.reference_bus_id = reference_bus_id
+        self.n = len(self.busses) # Number of Busses
+        self.graph = self.susceptance_graph(self.branches) # change attribute name?
         diag = np.array(self.graph.sum(axis=1)).flatten()
-        self.B = csr_matrix(np.diag(diag)- self.graph) # Suscepibility Matrix
+        self.B = diags(diag) - self.graph # Suscepibility Matrix
+        self.P = self.net_power(self.busses)
     
-   
     @classmethod
     def ieee57(cls) -> "PowerGrid":
         """
@@ -64,9 +63,41 @@ class PowerGrid(): # rough outline
     def random(cls, n: int) -> "PowerGrid":
         pass
 
+    def susceptance_graph(self, branches: list[Branch]):
+        edges = [(branch.from_bus-1, branch.to_bus-1) for branch in branches] # switch to 0-indexing
+        rows, cols = zip(*edges)
+        susceptances = [1/(branch.reactance) for branch in branches] # Assuming small resistances
+        graph = csr_matrix((susceptances, (rows, cols)), shape=(self.n, self.n))  # Undirected Graph with weights corresponding to susceptances 
+        graph += graph.T
+        return graph
+    
+    def net_power(self, busses: list[Bus]) -> csr_matrix:
+        return csr_matrix([bus.generation - bus.load for bus in busses]).T # shape=(n, 1)
 
-    def loss_function(costs: list[float]) -> float:
-        assert len(costs) == len()
+    def solve_lse(self):
+        non_slack = [i for i in range(self.n) if i != self.reference_bus_id]
+
+        B_red = self.B[non_slack, :][:, non_slack]
+        P_red = self.P[non_slack]
+        theta_red = spsolve(B_red, P_red.toarray().flatten()) # need to convert Sprase P to dense P to solve
+
+        theta = np.zeros(self.n)
+        theta[non_slack] = theta_red
+
+        return theta
+    
+    """
+    c: List of cost parameters 
+    """
+    def loss_function(self, c: list[float] = None) -> float:
+        if c == None:
+            c = np.zeros(self.n)
+        else:
+            c = np.asarray(c)
+
+        
+        # compute laplacian 
+
         
 
         
