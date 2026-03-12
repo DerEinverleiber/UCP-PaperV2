@@ -2,11 +2,12 @@ import numpy as np
 from dataclasses import dataclass
 from scipy.sparse import csr_matrix
 from scipy.sparse import diags
-from scipy.sparse.csgraph import laplacian
 from scipy.sparse.linalg import spsolve
-from scipy.linalg import inv
 
-@dataclass 
+from helpers import inverse_reduced_graph_laplacian
+
+
+@dataclass
 class Bus:
     idx: int
     load: float
@@ -111,8 +112,17 @@ class PowerGrid:
     """
     def loss_function(self, x: list[int], c: list[float] = None, return_net_power_io_diff: bool = False) -> float | tuple[float, float]:
         num_edges = np.array(self.num_outgoing_branches(), dtype=int) # d1, ..., dN
+        transmission_lines_omitted_due_to_reference_bus = len(self.get_neighbor_nodes(self.reference_bus_id + 1))
+        linear_cost_factors_to_omit = np.arange(0, transmission_lines_omitted_due_to_reference_bus, 1) +  num_edges[:transmission_lines_omitted_due_to_reference_bus].sum()
 
-        inv_reduced_graph_laplacian = self.prepare_inverse_reduced_graph_laplacian()
+        if c is None:
+            c = np.zeros(transmission_lines_omitted_due_to_reference_bus)
+        else:
+            c = np.asarray(c)
+            c = np.delete(c, linear_cost_factors_to_omit)
+
+
+        inv_reduced_graph_laplacian = inverse_reduced_graph_laplacian(self.graph, self.reference_bus_id)
         power_vector = self.apply_decision_variables(x)
 
         reduced_power_vector = np.delete(power_vector, self.reference_bus_id)
@@ -122,14 +132,9 @@ class PowerGrid:
         theta_prime = np.repeat(theta_reduced, np.delete(num_edges, self.reference_bus_id), axis=0)
         rho = np.dot(b_prime, theta_prime)
 
-        if c is None:
-            c = np.zeros(theta_prime.shape[0])
-        else:
-            c = np.asarray(c)
-
         total_generation_consumption_discrepancy = np.abs(np.sum(power_vector))
         penalty_term = 10000 * total_generation_consumption_discrepancy # total power IO diff. should approx. be 0
-        loss =  np.dot(c, np.abs(rho)) + penalty_term
+        loss = np.dot(c, np.abs(rho)) + penalty_term
 
         if return_net_power_io_diff:
             return loss, total_generation_consumption_discrepancy
@@ -159,14 +164,6 @@ class PowerGrid:
                         b_prime[i, k] = self.B[i, e(i, j) - 1]
 
         return b_prime
-
-    def prepare_inverse_reduced_graph_laplacian(self) -> csr_matrix:
-        graph = self.graph.toarray()
-
-        graph_laplacian = laplacian(graph)
-        reduced_graph_laplacian = np.delete(graph_laplacian, self.reference_bus_id, axis=0)
-        reduced_graph_laplacian = np.delete(reduced_graph_laplacian, self.reference_bus_id, axis=1)
-        return inv(reduced_graph_laplacian)
 
     def apply_decision_variables(self, x: list[int]) -> csr_matrix:
         generator_indices = np.array(self.get_generator_indices(), dtype=int) - 1 # 0-based indexing
