@@ -8,7 +8,7 @@ import numpy as np
 from powergrid import PowerGrid
 
 
-def brute_force(grid: PowerGrid, bounds: list[tuple[int, int]], c: list[int], write_to_file: bool | str = True, num_chunks: int = 20) -> tuple[list[int], float, float]:
+def brute_force(grid: PowerGrid, bounds: list[tuple[int, int]], c: list[int], write_to_file: bool | str = True, num_chunks: int = 20, start_from: tuple[int] = None) -> tuple[list[int], float, float]:
     assert all([low < high for low, high in bounds]), \
         f"Are you sure bounds are correctly set? Some lower bounds seem to be greater/equal to the higher bounds."
 
@@ -18,6 +18,11 @@ def brute_force(grid: PowerGrid, bounds: list[tuple[int, int]], c: list[int], wr
 
     ranges = [range(low, high) for low, high in bounds]
     cartesian_product = numpy.array(list(itertools.product(*ranges)))
+    if start_from:
+        assert len(start_from) == cartesian_product.shape[1], "start_from candidate has invalid length"
+        mask = np.all(cartesian_product == start_from, axis=1)
+        first_match_idx = np.argmax(mask)
+        cartesian_product = cartesian_product[first_match_idx:]
     chunks = numpy.array_split(cartesian_product, num_chunks)
 
     buffer = []
@@ -59,6 +64,7 @@ if __name__ == '__main__':
         bounds=[(0, 4)] * len(generators),
         c=np.random.uniform(0, 1, size=80),
         write_to_file=True,
+        start_from=(1, 1, 1, 1, 1)
     )
 
     print("Best candidate:", best_candidate)
