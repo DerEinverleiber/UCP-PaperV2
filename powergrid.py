@@ -111,25 +111,20 @@ class PowerGrid:
     x: List of decision variables (MINLP)
     """
     def loss_function(self, x: list[int], c: list[float] = None, return_net_power_io_diff: bool = False) -> float | tuple[float, float]:
-        num_edges = np.array(self.num_outgoing_branches(), dtype=int) # d1, ..., dN
-        transmission_lines_omitted_due_to_reference_bus = len(self.get_neighbor_nodes(self.reference_bus_id + 1))
-        linear_cost_factors_to_omit = np.arange(0, transmission_lines_omitted_due_to_reference_bus, 1) +  num_edges[:transmission_lines_omitted_due_to_reference_bus].sum()
-
         if c is None:
-            c = np.zeros(transmission_lines_omitted_due_to_reference_bus)
+            c = np.zeros(self.num_outgoing_branches())
         else:
             c = np.asarray(c)
-            c = np.delete(c, linear_cost_factors_to_omit)
 
-
+        num_edges = np.array(self.num_outgoing_branches(), dtype=int) # d1, ..., dN
         inv_reduced_graph_laplacian = inverse_reduced_graph_laplacian(self.graph, self.reference_bus_id)
         power_vector = self.apply_decision_variables(x)
 
         reduced_power_vector = np.delete(power_vector, self.reference_bus_id)
         theta_reduced = np.dot(inv_reduced_graph_laplacian, reduced_power_vector)
+        theta_prime = np.repeat(np.insert(theta_reduced, self.reference_bus_id, 0) , num_edges, axis=0)
 
         b_prime = self.prepare_b_prime(num_edges)
-        theta_prime = np.repeat(theta_reduced, np.delete(num_edges, self.reference_bus_id), axis=0)
         rho = np.dot(b_prime, theta_prime)
 
         total_generation_consumption_discrepancy = np.abs(np.sum(power_vector))
@@ -146,9 +141,9 @@ class PowerGrid:
 
         # diagonal entries
         b_prime_diags_row_indices = np.concatenate(
-            [[i] * d for i, d in enumerate(num_edges) if i != self.reference_bus_id]) # 0-based
+            [[i] * d for i, d in enumerate(num_edges)]) # 0-based
         b_prime_diags_col_indices = np.concatenate(
-            [np.arange(0, d) for i, d in enumerate(num_edges) if i != self.reference_bus_id]) # 0-based
+            [np.arange(0, d) for i, d in enumerate(num_edges)]) # 0-based
         b_prime_diags_col_indices = np.array(
             [e(row, col) for row, col in zip(b_prime_diags_row_indices, b_prime_diags_col_indices, strict=True)] # 1-based
         )
@@ -157,7 +152,7 @@ class PowerGrid:
         b_prime = diags(b_prime_diags).toarray()
 
         # off-diagonal entries
-        for i in range(self.n - 1): # reduced graph has only n - 1 nodes/busses
+        for i in range(self.n):
             for j in range(num_edges[i]):
                 for k in range(b_prime.shape[1]):
                     if i * j != k:
