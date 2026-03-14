@@ -49,7 +49,8 @@ def brute_force(grid: PowerGrid, bounds: list[tuple[int, int]], c: list[int], wr
         if file:
             for row in buffer:
                 writer.writerow(row)
-        print(f"Chunk {i}/{len(chunks)} completed.")
+        buffer = []
+        print(f"Chunk {i + 1}/{len(chunks)} completed.")
 
 
     return best_candidate, best_loss, best_net_power_io_diff
@@ -64,7 +65,6 @@ if __name__ == '__main__':
         bounds=[(0, 4)] * len(generators),
         c=np.random.uniform(0, 1, size=80),
         write_to_file=True,
-        start_from=(1, 1, 1, 1, 1)
     )
 
     print("Best candidate:", best_candidate)
