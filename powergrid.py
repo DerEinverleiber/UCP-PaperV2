@@ -242,7 +242,7 @@ class PowerGrid():
 
         return theta
 
-    def loss_function(self, c: list[float] = None) -> float:
+    def loss_function(self, x: list[int], c: list[float] = None, return_net_power_io_diff: bool = True) -> float | tuple[float, float]:
         """
         Compute total generation cost for a given generator on/off vector.
 
@@ -255,6 +255,7 @@ class PowerGrid():
         -------
         float
             Total generation cost.
+            :param return_net_power_io_diff:
         """
         if x is None:
             x = np.ones(self.n) # all generators are on
