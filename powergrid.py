@@ -4,8 +4,6 @@ from scipy.sparse import csr_matrix
 from scipy.sparse import diags
 from scipy.sparse.linalg import spsolve
 
-from helpers import inverse_reduced_graph_laplacian
-
 
 @dataclass
 class Bus:
