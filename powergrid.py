@@ -110,6 +110,7 @@ class PowerGrid:
     x: List of decision variables (MINLP)
     """
     def loss_function(self, x: list[int], c: list[float] = None, return_net_power_io_diff: bool = False) -> float | tuple[float, float]:
+        num_edges = np.array(self.num_outgoing_branches(), dtype=int)  # d1, ..., dN
         if c is None:
             c = np.zeros(num_edges)
         else:
