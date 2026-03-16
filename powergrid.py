@@ -73,6 +73,7 @@ class PowerGrid:
     def get_generator_indices(self) -> list[int]:
         return [bus.idx for bus in self.busses if bus.generation > 0]
 
+    # 1-based indexing
     def get_neighbor_nodes(self, bus_idx: int) -> list[int]:
         return [branch.to_bus for branch in self.branches if branch.from_bus == bus_idx]
 
@@ -112,17 +113,14 @@ class PowerGrid:
     """
     def loss_function(self, x: list[int], c: list[float] = None, return_net_power_io_diff: bool = False) -> float | tuple[float, float]:
         if c is None:
-            c = np.zeros(self.num_outgoing_branches())
+            c = np.zeros(num_edges)
         else:
             c = np.asarray(c)
 
-        num_edges = np.array(self.num_outgoing_branches(), dtype=int) # d1, ..., dN
-        inv_reduced_graph_laplacian = inverse_reduced_graph_laplacian(self.graph, self.reference_bus_id)
         power_vector = self.apply_decision_variables(x)
 
-        reduced_power_vector = np.delete(power_vector, self.reference_bus_id)
-        theta_reduced = np.dot(inv_reduced_graph_laplacian, reduced_power_vector)
-        theta_prime = np.repeat(np.insert(theta_reduced, self.reference_bus_id, 0) , num_edges, axis=0)
+        theta = self.solve_lse()
+        theta_prime = np.repeat(theta, num_edges, axis=0)
 
         b_prime = self.prepare_b_prime(num_edges)
         rho = np.dot(b_prime, theta_prime)
@@ -137,27 +135,26 @@ class PowerGrid:
             return loss
 
     def prepare_b_prime(self, num_edges: np.ndarray[int]) -> csr_matrix:
-        e = lambda v, j: self.get_neighbor_nodes(v + 1)[j]  # return j-th entry of neighbor nodes
+        e = lambda v, j: self.get_neighbor_nodes(v + 1)[j] - 1  # return j-th entry of neighbor nodes
 
         # diagonal entries
         b_prime_diags_row_indices = np.concatenate(
-            [[i] * d for i, d in enumerate(num_edges)]) # 0-based
+            [[i] * d for i, d in enumerate(num_edges)])
         b_prime_diags_col_indices = np.concatenate(
-            [np.arange(0, d) for i, d in enumerate(num_edges)]) # 0-based
+            [np.arange(0, d) for i, d in enumerate(num_edges)])
         b_prime_diags_col_indices = np.array(
-            [e(row, col) for row, col in zip(b_prime_diags_row_indices, b_prime_diags_col_indices, strict=True)] # 1-based
+            [e(row, col) for row, col in zip(b_prime_diags_row_indices, b_prime_diags_col_indices, strict=True)] # 0-based
         )
 
-        b_prime_diags = self.B[b_prime_diags_row_indices, b_prime_diags_col_indices - 1].A1 # e uses 1-based indexing
-        b_prime = diags(b_prime_diags).toarray()
+        b_prime_diags = self.B[b_prime_diags_row_indices, b_prime_diags_col_indices].A1
+        b_prime = np.zeros(shape=(b_prime_diags.shape[0], b_prime_diags.shape[0]))
 
-        # off-diagonal entries
+        # off-diagonal
         for i in range(self.n):
-            for j in range(num_edges[i]):
-                for k in range(b_prime.shape[1]):
-                    if i * j != k:
-                        b_prime[i, k] = self.B[i, e(i, j) - 1]
+            for k in range(num_edges[i]):
+                b_prime[i] = np.array([-self.B[i, e(i, k)]] * b_prime.shape[1])
 
+        np.fill_diagonal(b_prime, b_prime_diags)
         return b_prime
 
     def apply_decision_variables(self, x: list[int]) -> csr_matrix:
