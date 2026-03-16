@@ -8,9 +8,12 @@ Contains main findings / Plots of paper and shows how to use the attached python
 Contains PowerGrid class, loss function 
 
 ### q_optimizer.py
-Will contain implementation of Qunatum Optimizer
+Will contain implementation of Quantum Optimizer
 ### cl_optimizer.py
-Will contian implementation of Classical Optimizer
+Will contain implementation of Classical Optimizer
+
+### brute_force.py
+Contains brute force candidate space exploration
 
 ### convert_data.py
 Only serves purpose of dealing with IEEE57 data. Currently it only works partially.
