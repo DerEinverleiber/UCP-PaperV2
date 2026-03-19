@@ -2,7 +2,7 @@ class QOptimizer():
     """
     Class Implementing the quantun optimization architecture presented in J. Stein, et al. (https://arxiv.org/abs/2305.08482) Fig. 6
     """
-    def __init__(self, n, p):
+    def __init__(self, n: int, p: int, parameterization: Parameterization):
         """
         n system size
         p circuit depth
