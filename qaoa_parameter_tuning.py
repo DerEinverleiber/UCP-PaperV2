@@ -1,27 +1,52 @@
 import numpy as np
 import scipy
 
-from q_optimizer import QOptimizer
+class ChebyShevOptimizer:
 
-
-class IterativeInterpolation:
-
-    def __init__(self, qaoa: QOptimizer, init_gamma: np.ndarray, init_beta: np.ndarray, max_energy: float, min_energy: float):
-        self.qaoa = qaoa
-        self.init_gamma = init_gamma
-        self.init_beta = init_beta
-        self.max_energy = max_energy
-        self.min_energy = min_energy
+    def __init__(self, p: int, num_coefs: int, stepsize=0.01):
+        self.p = p
+        self.num_coefs = num_coefs
+        self.stepsize = stepsize
 
     # adapted from: https://github.com/jpmorganchase/QOKit/blob/main/qokit/parameter_utils.py
-    def to_chebyshev_basis_coefficients(self, gamma: np.ndarray, beta: np.ndarray, depth: int) -> tuple[np.ndarray, np.ndarray]:
-        fit_interval = np.linspace(-1, 1, len(gamma))
-        u = np.polynomial.chebyshev.chebfit(fit_interval, gamma, deg=depth - 1)  # offset of 1 due to fitting convention
-        v = np.polynomial.chebyshev.chebfit(fit_interval, beta, deg=depth - 1)
+    def to_chebyshev_basis_coefficients(self, gammas: np.ndarray, betas: np.ndarray, num_coefs: int) -> tuple[np.ndarray, np.ndarray]:
+        """Convert gamma, beta angles in standard parameterizing QAOA to the Chebyshev basis
+        
+        Parameters
+        ----------
+        gammas : list-like
+        betas : list-like
+        num_coeffs : int
+            p // 2 is recommended
+
+        Returns
+        -------
+        u, v : np.array
+            QAOA parameters in Chebyshev basis
+        """
+        assert len(gammas) == len(betas)
+        fit_interval = np.linspace(-1, 1, len(gammas))
+        u = np.polynomial.chebyshev.chebfit(fit_interval, gammas, deg=num_coefs - 1)  # offset of 1 due to fitting convention
+        v = np.polynomial.chebyshev.chebfit(fit_interval, betas, deg=num_coefs - 1)
         return u, v
 #
     # adapted from: https://github.com/jpmorganchase/QOKit/blob/main/qokit/parameter_utils.py
     def to_qaoa_angles(self, u: np.ndarray, v: np.ndarray, p: int) -> tuple[np.ndarray, np.ndarray]:
+        """Convert u,v in Chebyshev basis of functions
+        to gamma, beta angles of QAOA schedule
+
+        Parameters
+        ----------
+        u : list-like
+        v : list-like
+        p : int, the number of coefficients
+
+        Returns
+        -------
+        gamma, beta : np.array
+            QAOA angles parameters in standard parameterization
+        """
+        assert len(u) == len(v)
         fit_interval = np.linspace(-1, 1, p)
         gamma = np.polynomial.chebyshev.chebval(fit_interval, u)
         beta = np.polynomial.chebyshev.chebval(fit_interval, v)

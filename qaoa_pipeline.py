@@ -160,6 +160,17 @@ class IterativeInterpolation:
         return coeffs
     
     def run(self):
+        '''
+        To Do:
+            - read paper and their code to check weather my understanding is correct (also of _pad and _interpolate)
+            - potential problems: {-requires_grad is part of pennylane.numpy, not normal numpy, 
+                - rn delta is absolute not relative, - are coefficients even differentiable? - rebuild qaoa w/ p0 before loop}
+            - Test optimization with MaxCut Problem
+            - Opt. Compare to plain 2p gradient descent
+            - Clean up / delete other files (check in with Moritz)
+            - Push to main branch
+            - Even later: test other (oolder) classes
+        '''
         c_pat = 0 # initialize patience counter
         p = self.p0
         AR_old, AR_current = 0.0, 0.0 #
