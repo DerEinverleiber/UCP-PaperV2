@@ -1,10 +1,11 @@
 import pennylane as qml
 import numpy as np
-# We will be using the pennylane qml.qaoa class https://docs.pennylane.ai/en/stable/code/qml_qaoa.html
 
 class QOptimizer():
     """
     Class Implementing the quantun optimization architecture presented in J. Stein, et al. (https://arxiv.org/abs/2305.08482) Fig. 6
+    We will be using the pennylane qml.qaoa class https://docs.pennylane.ai/en/stable/code/qml_qaoa.html
+    We follow the tutorial https://pennylane.ai/qml/demos/tutorial_qaoa_intro for the QAOA circuit implementation
     """
     def __init__(self, n: int, p: int, costs, parameters = None, use_gd_optimizer: bool = False, max_iter=100):
         """
@@ -43,7 +44,6 @@ class QOptimizer():
         betas = np.linspace(1, 0, self.p)
         return gammas, betas
     
-    # We follow the tutorial https://pennylane.ai/qml/demos/tutorial_qaoa_intro for the QAOA circuit implementation
 
     def qaoa_layer(self, gamma, beta):
         qml.qaoa.layers.cost_layer(gamma, self.cost_h)
@@ -62,8 +62,7 @@ class QOptimizer():
         return self.qnode(gammas, betas)
 
     # parameter optimization
-    def optimize(self, return_history=False):
-        params_history = []
+    def optimize(self):
         if self.use_gd_optimizer:
             # Gradient Descent Optimization
             for i in range(self.max_iter):
@@ -72,4 +71,3 @@ class QOptimizer():
             #Chebyshev optimization
             pass
 
-    # Return history?
