@@ -19,7 +19,7 @@ class IterativeInterpolation:
         u = np.polynomial.chebyshev.chebfit(fit_interval, gamma, deg=depth - 1)  # offset of 1 due to fitting convention
         v = np.polynomial.chebyshev.chebfit(fit_interval, beta, deg=depth - 1)
         return u, v
-
+#
     # adapted from: https://github.com/jpmorganchase/QOKit/blob/main/qokit/parameter_utils.py
     def to_qaoa_angles(self, u: np.ndarray, v: np.ndarray, p: int) -> tuple[np.ndarray, np.ndarray]:
         fit_interval = np.linspace(-1, 1, p)
