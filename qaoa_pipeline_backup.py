@@ -1,5 +1,4 @@
 import pennylane as qml
-#from pennylane import numpy as np
 import numpy as np
 
 class QAOA_circuit:
@@ -26,22 +25,13 @@ class QAOA_circuit:
         self.mix_h = qml.qaoa.mixers.x_mixer(wires=range(self.n))
         self.dev = qml.device("default.qubit", wires=len(self.wires)) # or lightning?
         self.qnode = qml.QNode(self._qnode, self.dev)
-        self.prob_qnode = qml.QNode(self._prob_qnode, self.dev)   # NEW
-
     
     def _qnode(self, gammas, betas):
         self.circuit(gammas, betas)
         return qml.expval(self.cost_h)
-    
-    def _prob_qnode(self, gammas, betas):   # NEW
-        self.circuit(gammas, betas)
-        return qml.probs(wires=self.wires)
-    
+
     def qaoa_layer(self, gamma, beta):
-        #qml.qaoa.layers.cost_layer(gamma, self.cost_h)
-        #qml.qaoa.layers.mixer_layer(beta, self.mix_h)
-        phases = qml.numpy.exp(-1j * gamma * self.costs)
-        qml.DiagonalQubitUnitary(phases, wires=self.wires)
+        qml.qaoa.layers.cost_layer(gamma, self.cost_h)
         qml.qaoa.layers.mixer_layer(beta, self.mix_h)
 
     def circuit(self, gammas, betas):
@@ -54,22 +44,6 @@ class QAOA_circuit:
     def cost_function(self, params):
         gammas, betas = params
         return self.qnode(gammas, betas)
-    
-    def distribution(self, params, as_dict=False):   # NEW
-        """
-        Return computational basis probabilities:
-        [p(000...0), p(000...1), ..., p(111...1)]
-
-        If as_dict=True, returns:
-        {'000...0': p0, '000...1': p1, ..., '111...1': p_last}
-        """
-        gammas, betas = params
-        probs = self.prob_qnode(gammas, betas)
-
-        if as_dict:
-            bitstrings = [format(i, f"0{self.n}b") for i in range(2**self.n)]
-            return dict(zip(bitstrings, probs))
-        return probs
 
 '''
 Used like
@@ -79,18 +53,12 @@ energy = qaoa.cost_function(params)
 '''
 
 class ChebyshevOptimizer:
-    def __init__(self, qaoa_circuit: QAOA_circuit, num_coeffs: int, stepsize: float =0.005):
+    def __init__(self, qaoa_circuit: QAOA_circuit, num_coeffs: int, stepsize: float =0.1):
         self.qaoa_circuit = qaoa_circuit
         #self.p = self.qaoa_circuit.p
         self.num_coeffs = num_coeffs
         self.stepsize = stepsize
-        """
-        AdamOptimizer turned out to work out a lot better than plane gradient GradientDescent!
-        The JPMorgan paper relied on gradient free BOBYQA optimization (they also used the Approxmation Ratio
-        directly as their objective function). So if optimization turns out to be an issue
-        for optimizing the cost function of the UC problem, we can come back here later on...
-        """
-        self.optimizer = qml.AdamOptimizer(stepsize)
+        self.optimizer = qml.GradientDescentOptimizer(stepsize)
 
     # adapted from: https://github.com/jpmorganchase/QOKit/blob/main/qokit/parameter_utils.py
     def to_chebyshev(self, gammas: np.ndarray, betas: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -139,9 +107,6 @@ class ChebyshevOptimizer:
     def wrapped_cost_function(self, coeffs):
         u, v = coeffs 
         gammas, betas = self.to_angles(u, v)
-        """
-        !!! remove -1 for UC problem, just flipped here for maxcut
-        """
         return self.qaoa_circuit.cost_function((gammas, betas))
 
     def step(self, coeffs):
@@ -154,7 +119,7 @@ class IterativeInterpolation:
     """Following the Iterative Interpolation (II) algorithm, as proposed by A. Apte, et al. (arXiv:2504.01694v1)
     """
     def __init__(self, init_params, qaoa_circuit: QAOA_circuit, cheby_optimizer: ChebyshevOptimizer,
-                p0: int, p_max: int, C: int, 
+                p0: int, C: int, 
                 epsilon: float, tau: int, delta_p=5, target_AR=0.95, opt_steps :int = 100
                 ):
         self.init_params = init_params
@@ -163,7 +128,7 @@ class IterativeInterpolation:
         self.max_cost = qaoa_circuit.max_cost
         self.cheby_optimizer = cheby_optimizer
         self.p0 = p0
-        self.p_max = p_max # or simply QAOA depth
+        self.p_max = qaoa_circuit.p # or simply QAOA depth
         self.delta_p = delta_p # choose for convenience
         self.C = C # choose p // 2 ?
         self.epsilon = epsilon
@@ -179,8 +144,8 @@ class IterativeInterpolation:
         u = np.append(u, 0.0)
         v = np.append(v, 0.0)
         self.C += 1
-        self.cheby_optimizer.num_coeffs = len(u) # update optimizer
-        return qml.numpy.array([u, v], requires_grad=True)
+        self.cheby_optimizer.num_coeffs = len(coeffs[0]) # update optimizer
+        return qml.np.array([u, v], requires_grad=True)
 
     
     def _interpolate(self, coeffs, p):
@@ -196,7 +161,7 @@ class IterativeInterpolation:
         )
         # return updated gammas, betas
         u, v = coeffs
-        gammas, betas = self.cheby_optimizer.to_angles(u, v)
+        gammas, betas = self.cheby_optimizer.to_angles(coeffs)
         return (gammas, betas)
     
     def run(self):
@@ -214,13 +179,11 @@ class IterativeInterpolation:
         c_pat = 0 # initialize patience counter
         p = self.p0
         AR_old, AR_current = 0.0, 0.0 #
-        ARs = {}
-        energies = {}
         gammas, betas = self.init_params # initial parameters of circuit with depth p0
         
         while p <= self.p_max and AR_current < self.target_AR: #and i <= self.max_iter:
             u, v = self.cheby_optimizer.to_chebyshev(gammas, betas) # transform (gamma^p, beta^p) to functional basis
-            coeffs = qml.numpy.array([u, v], requires_grad=True)
+            coeffs = qml.np.array([u, v], requires_grad=True)
            # initialize parameters?    
             for _ in range(self.opt_steps): # optimize the first C coefficients
                 coeffs = self.cheby_optimizer.step(coeffs)
@@ -241,13 +204,11 @@ class IterativeInterpolation:
                 coeffs = self._pad(coeffs)    
                 c_pat = 0
             # perform interpolation
-            ARs[p] = AR_current
-            energies[p] = energy
             AR_old = AR_current 
             p+=self.delta_p
             if p <= self.p_max:
                 gammas, betas = self._interpolate(coeffs, p) # updated p and optimized coeffs
-        return gammas, betas, energies, ARs
+        return gammas, betas, energy, AR_current
 
 
 
