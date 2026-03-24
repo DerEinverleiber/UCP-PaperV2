@@ -219,12 +219,15 @@ class IterativeInterpolation:
         gammas, betas = self.init_params # initial parameters of circuit with depth p0
         
         while p <= self.p_max and AR_current < self.target_AR: #and i <= self.max_iter:
+            print(f'>> II: p={p} of {self.p_max}, AR_curent={AR_current}')
             u, v = self.cheby_optimizer.to_chebyshev(gammas, betas) # transform (gamma^p, beta^p) to functional basis
             coeffs = qml.numpy.array([u, v], requires_grad=True)
            # initialize parameters?    
+            print('    >> Start Chebyshev Opt.')
             for _ in range(self.opt_steps): # optimize the first C coefficients
                 coeffs = self.cheby_optimizer.step(coeffs)
             u, v = coeffs
+            print('    >> End Chebyshev Opt.')
             # current energy
             #gammas, betas = self.cheby_optimizer.to_angles(u, v)
             #energy = self.qaoa_circuit.cost_function((gammas, betas))
