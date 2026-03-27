@@ -57,17 +57,18 @@ def brute_force(grid: PowerGrid, bounds: list[tuple[int, int]], c: list[int], wr
 
 
 if __name__ == '__main__':
-    grid = PowerGrid.ieee57()
-    generators = grid.get_generator_indices()
-    print("Generators indices:", generators)
-    best_candidate, best_loss, best_dis = brute_force(
-        grid,
-        bounds=[(0, 4)] * len(generators),
-        c=np.random.uniform(0, 1, size=80),
-        write_to_file=True,
-    )
+    for seed in [57, 9, 110, 5004, 33, 42, 1, 99, 100, 808]:
+        grid = PowerGrid.random(n=10, seed=seed)
+        generators = grid.get_generator_indices()
+        print("Generators indices:", generators)
+        best_candidate, best_loss, best_dis = brute_force(
+            grid,
+            bounds=[(0, 4)] * len(generators),
+            c=np.random.uniform(0, 1, size=sum(grid.num_outgoing_branches())),
+            write_to_file=True,
+        )
 
-    print("Best candidate:", best_candidate)
-    print("Best loss:", best_loss)
-    print("Best discrepancy", best_dis)
+        print("Best candidate:", best_candidate)
+        print("Best loss:", best_loss)
+        print("Best discrepancy", best_dis)
 
