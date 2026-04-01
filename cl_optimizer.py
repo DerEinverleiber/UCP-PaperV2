@@ -17,8 +17,8 @@ class SimulatedAnnealing:
         self.history: list[tuple[list[int], float]] = []
 
     @classmethod
-    def geometric_temp_schedule(cls, init_temp: int, end_temp: int, num_steps: int) -> np.ndarray:
-        return np.geomspace(init_temp, end_temp, num=num_steps)
+    def geometric_temp_schedule(cls, init_temp: int, end_temp: int, temp_iterations: int) -> np.ndarray:
+        return np.geomspace(init_temp, end_temp, num=temp_iterations)
 
     def bounds_to_neighborhood_function(self) -> Callable[[list[int]], list[int]]:
         def neighborhood_function(x: list[int]) -> list[int]:
@@ -36,7 +36,6 @@ class SimulatedAnnealing:
 
     def optimize(
             self,
-            temp_iterations: int,
             temp_schedule: np.ndarray = None,
             neighborhood_fun: Callable[[list[int]], list[int]] = None,
             verbose: bool = True,
@@ -56,21 +55,20 @@ class SimulatedAnnealing:
         self.history = [(x, loss)]
     
         for temp in temp_schedule:
-            for _ in range(temp_iterations):
-                x_new = neighborhood_fun(x)
-    
-                entry = self.lookup_table.loc[self.lookup_table['candidate'] == str(x_new)]
-                loss_new = entry.loc[:, 'loss'].iloc[0]
-                net_power_io_diff = entry.loc[:, 'abs. diff. net power IO'].iloc[0]
-    
-                if loss_new < loss or np.random.rand() < np.exp(-(loss_new - loss) / temp):
-                    x, loss = x_new, loss_new
-                    if loss_new < best_loss:
-                        best_x, best_loss = x_new, loss_new
-                
-                self.history.append((x_new.copy(), loss_new))
-                if verbose:
-                    print(f'Candidate: {x_new}; Loss: {round(loss_new, 5)}; abs. diff. net power IO: {round(net_power_io_diff, 5)} --- Best Candidate {best_x}; Best loss: {best_loss}')
+            x_new = neighborhood_fun(x)
+
+            entry = self.lookup_table.loc[self.lookup_table['candidate'] == str(x_new)]
+            loss_new = entry.loc[:, 'loss'].iloc[0]
+            net_power_io_diff = entry.loc[:, 'abs. diff. net power IO'].iloc[0]
+
+            if loss_new < loss or np.random.rand() < np.exp(-(loss_new - loss) / temp):
+                x, loss = x_new, loss_new
+                if loss_new < best_loss:
+                    best_x, best_loss = x_new, loss_new
+
+            self.history.append((x_new.copy(), loss_new))
+            if verbose:
+                print(f'Candidate: {x_new}; Loss: {round(loss_new, 5)}; abs. diff. net power IO: {round(net_power_io_diff, 5)} --- Best Candidate {best_x}; Best loss: {best_loss}')
     
         return best_x, best_loss
 
@@ -87,7 +85,7 @@ if __name__ == "__main__":
         temp_schedule=SimulatedAnnealing.geometric_temp_schedule(init_temp, end_temp, num_steps),
     )
 
-    best_candidate, loss = sim_ann.optimize(temp_iterations)
+    best_candidate, loss = sim_ann.optimize()
     pd.DataFrame(sim_ann.history, columns=['candidate', 'loss']).to_csv(
         f'data/simulated_annealing/path_init_{init_temp}_end_{end_temp}_steps_{num_steps}_iter_{temp_iterations}'
         f'__256_instances_2026-03-14_15-30-37.csv',
