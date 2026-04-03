@@ -115,7 +115,7 @@ class PowerGrid():
         return len(self.get_generator_indices())
 
     @classmethod
-    def random(cls, n: int, max_ratio: float = 10e-1, min_reactance :float =10e-2, seed=1234) -> "PowerGrid":
+    def random(cls, n: int, num_generators: int, max_ratio: float = 10e-1, min_reactance :float =10e-2, seed=1234) -> "PowerGrid":
         """
         Generate a random, connected power grid network for DC power flow experiments.
 
@@ -150,7 +150,12 @@ class PowerGrid():
         """
         rng = np.random.default_rng(seed)
 
-        loads, generations = rng.uniform(0, 1, (2, n))
+        generator_indices = rng.choice(list(range(n)), size=num_generators, replace=False)
+        generations = np.zeros(n, dtype=float)
+        generations[generator_indices] += rng.uniform(1e-2, 1, size=num_generators)
+
+        loads = rng.uniform(0, 1, n)
+
         edges = []
         nodes = list(range(n))
         rng.shuffle(nodes)
@@ -216,7 +221,7 @@ class PowerGrid():
         x = np.asarray(x)
         return csr_matrix(x*np.array([bus.generation - bus.load for bus in busses])).T # shape=(n, 1)
 
-    def solve_lse(self, P_update: csr_matrix =None):
+    def solve_lse(self, P_update: np.ndarray = None):
         """
         Solve the linear system B θ = P for bus voltage angles (DC approximation).
 
@@ -230,12 +235,12 @@ class PowerGrid():
             Voltage angles θ (radians) at all buses (length n), with reference bus at 0.
         """
         if P_update is None:
-            P_update = self.P
+            P_update = self.P.toarray().flatten()
         non_slack = [i for i in range(self.n) if i != self.reference_bus_id]
 
         B_red = self.B[non_slack, :][:, non_slack]
         P_red = P_update[non_slack]
-        theta_red = spsolve(B_red, P_red.toarray().flatten()) # need to convert Sprase P to dense P to solve
+        theta_red = spsolve(B_red, P_red) # need to convert Sprase P to dense P to solve
 
         theta = np.zeros(self.n)
         theta[non_slack] = theta_red
@@ -268,7 +273,7 @@ class PowerGrid():
 
         power_vector = self.apply_decision_variables(x)
 
-        theta = self.solve_lse()
+        theta = self.solve_lse(power_vector)
         theta_prime = np.repeat(theta, num_edges, axis=0)
 
         b_prime = self.prepare_b_prime(num_edges)
@@ -290,7 +295,7 @@ class PowerGrid():
         else:
             return loss
 
-    def prepare_b_prime(self, num_edges: np.ndarray[int]) -> csr_matrix:
+    def prepare_b_prime(self, num_edges: np.ndarray) -> np.ndarray:
         e = lambda v, j: self.get_neighbor_nodes(v + 1)[j] - 1  # return j-th entry of neighbor nodes
 
         # diagonal entries
@@ -313,7 +318,7 @@ class PowerGrid():
         np.fill_diagonal(b_prime, b_prime_diags)
         return b_prime
 
-    def apply_decision_variables(self, x: list[int]) -> csr_matrix:
+    def apply_decision_variables(self, x: np.ndarray) -> np.ndarray:
         generator_indices = np.array(self.get_generator_indices(), dtype=int) - 1 # 0-based indexing
         mask = np.zeros(len(self.busses), dtype=bool)
         mask[generator_indices] = True
@@ -322,3 +327,28 @@ class PowerGrid():
         power_vector[mask] *= x
         return power_vector
 
+
+if __name__ == '__main__':
+    import networkx as nx
+    from matplotlib import pyplot as plt
+
+
+    def plot_grid(pg: PowerGrid):
+        G = nx.from_scipy_sparse_array(pg.graph)
+        pos = nx.spring_layout(G)  # layout of the nodes
+        # Draw nodes
+        nx.draw_networkx_nodes(G, pos, node_color='skyblue', node_size=500)
+        # Draw edges
+        nx.draw_networkx_edges(G, pos, width=2)
+        # Draw labels
+        nx.draw_networkx_labels(G, pos, font_size=12)
+        plt.axis('off')
+        plt.show()
+
+
+    # plt.show()
+    pg = PowerGrid.random(n=10, num_generators=2)
+
+    print(pg.get_generator_indices())
+
+    plot_grid(pg)

@@ -22,7 +22,7 @@ def brute_force(
     best_loss = np.inf
     best_net_power_io_diff = None
 
-    ranges = [range(low, high) for low, high in bounds]
+    ranges = [range(low, high + 1) for low, high in bounds]
     cartesian_product = np.array(list(itertools.product(*ranges)))
     if start_from:
         assert len(start_from) == cartesian_product.shape[1], "start_from candidate has invalid length"
@@ -65,19 +65,24 @@ def brute_force(
 
 
 if __name__ == '__main__':
-    seeds = [57, 9, 110, 5004, 33, 42, 1, 99, 100, 808]
+    seeds = list(range(1, 11))
 
-    def execute_brute_force(seed):
+    num_generatorss = list(range(1, 21))
+
+    cartesian_product = list(itertools.product(seeds, num_generatorss))
+
+    def execute_brute_force(n: int, num_generators: int, seed: int) -> None:
         np.random.seed(seed)
-        grid = PowerGrid.random(n=10, seed=seed)
-        num_generators = len(grid.get_generator_indices())
+        grid = PowerGrid.random(n=n, num_generators=num_generators,  seed=seed)
         print("Generators indices:", num_generators)
 
-        file_name = f"candidate_space_{4**num_generators}_instances_{seed}_seed_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+        rng = np.random.default_rng(seed)
+
+        file_name = f"candidate_space_{2**num_generators}_candidates_{n}_buses_{seed}_seed_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
         best_candidate, best_loss, best_dis = brute_force(
             grid,
-            bounds=[(0, 4)] * num_generators,
-            c=np.random.uniform(0, 1, size=sum(grid.num_outgoing_branches())),
+            bounds=[(0, 1)] * num_generators,
+            c=rng.uniform(0, 1, size=sum(grid.num_outgoing_branches())),
             write_to_file=file_name,
             verbose=1
         )
@@ -86,5 +91,5 @@ if __name__ == '__main__':
         print("Best loss:", best_loss)
         print("Best discrepancy", best_dis)
 
-    Parallel(n_jobs=-1, verbose=11)(delayed(execute_brute_force)(seed) for seed in seeds)
+    Parallel(n_jobs=-1, verbose=11)(delayed(execute_brute_force)(n=20, num_generators=num_generators, seed=seed) for num_generators, seed in cartesian_product)
 
