@@ -95,25 +95,7 @@ class PowerGrid():
         busses = [Bus(bus_number[i], bus_load[i], bus_generation[i]) for i in range(len(bus_data))]
 
         return cls(busses, branches)
-
-    def num_outgoing_branches(self) -> list[int]:
-        num_outgoing_branches = [0] * self.n
-        for branch in self.branches:
-            num_outgoing_branches[branch.from_bus - 1] += 1 # switch to 0-indexing
-
-        assert sum(num_outgoing_branches) == len(self.branches)
-        return num_outgoing_branches
-
-    def get_generator_indices(self) -> list[int]:
-        return [bus.idx for bus in self.busses if bus.generation > 0]
-
-    # 1-based indexing
-    def get_neighbor_nodes(self, bus_idx: int) -> list[int]:
-        return [branch.to_bus for branch in self.branches if branch.from_bus == bus_idx]
-
-    def get_num_generators(self) -> int:
-        return len(self.get_generator_indices())
-
+    
     @classmethod
     def random(cls, n: int, num_generators: int, max_ratio: float = 10e-1, min_reactance :float =10e-2, seed=1234) -> "PowerGrid":
         """
@@ -202,7 +184,7 @@ class PowerGrid():
         return graph
     
 
-    def net_power(self, busses: list[Bus], x=None) -> csr_matrix:
+    def net_power(self, busses: list[Bus], x=None, load_factor: float = 1.0) -> csr_matrix:
         """
         Compute net power injections: P_i = x_i * P_gen,i - P_load,i.
 
@@ -216,11 +198,16 @@ class PowerGrid():
         csr_matrix
             Sparse column vector of net injections (n x 1).
         """
+        gen = np.array([bus.generation for bus in busses], dtype=float)
+        load = np.array([bus.load for bus in busses], dtype=float)
         if x is None:
-            x = np.ones(self.n) # all generators are turned on
-        x = np.asarray(x)
-        return csr_matrix(x*np.array([bus.generation - bus.load for bus in busses])).T # shape=(n, 1)
+            x = np.ones(self.n, dtype=float)
+        x = np.asarray(x, dtype=float)
+        return x * gen - load_factor * load
 
+    def get_generator_indices(self) -> list[int]:
+        return [bus.idx for bus in self.busses if bus.generation > 0]
+   
     def solve_lse(self, P_update: np.ndarray = None):
         """
         Solve the linear system B θ = P for bus voltage angles (DC approximation).
@@ -235,7 +222,10 @@ class PowerGrid():
             Voltage angles θ (radians) at all buses (length n), with reference bus at 0.
         """
         if P_update is None:
-            P_update = self.P.toarray().flatten()
+            P_update = self.P.copy()
+        else:
+            P_update = np.asarray(P_update, dtype=float)
+        
         non_slack = [i for i in range(self.n) if i != self.reference_bus_id]
 
         B_red = self.B[non_slack, :][:, non_slack]
@@ -246,8 +236,19 @@ class PowerGrid():
         theta[non_slack] = theta_red
 
         return theta
+    
+    def compute_line_flows(self, theta: np.ndarray) -> np.ndarray:
+        rho = np.zeros(len(self.branches), dtype=float)
 
-    def loss_function(self, x: list[int], c: list[float] = None, return_net_power_io_diff: bool = True) -> float | tuple[float, float]:
+        for m, br in enumerate(self.branches):
+            i = br.from_bus - 1
+            j = br.to_bus - 1
+            b_ij = br.reactance / (br.resistance**2 + br.reactance**2)
+            rho[m] = b_ij * (theta[i] - theta[j])
+
+        return rho
+
+    def loss_function(self, x: list[int], c: list[float] = None, load_factor: f = 1.0, mismatch_penalty = 1e4, return_net_power_io_diff: bool = True) -> float | tuple[float, float]:
         """
         Compute total generation cost for a given generator on/off vector.
 
@@ -266,66 +267,27 @@ class PowerGrid():
             x = np.ones(self.n) # all generators are on
         x = np.asarray(x)
 
-        num_edges = np.array(self.num_outgoing_branches(), dtype=int)  # d1, ..., dN
         if c is None:
-            c = np.zeros(num_edges)
-        c = np.asarray(c)
+            c = np.ones(len(self.branches), dtype=float)
+        c = np.asarray(c, dtype=float)
 
-        power_vector = self.apply_decision_variables(x)
-
+        # Determine Power Vector 
+        power_vector = self.net_power(x=x, busses=self.busses, load_factor=load_factor)
+        # Determine theta
         theta = self.solve_lse(power_vector)
-        theta_prime = np.repeat(theta, num_edges, axis=0)
+        # Determine line flows
+        rho = self.compute_line_flows(theta)
+        
+        # Determine penalty
+        mismatch = np.sum(power_vector)
+        penalty_term = np.abs(mismatch*mismatch_penalty)
 
-        b_prime = self.prepare_b_prime(num_edges)
-        rho = np.dot(b_prime, theta_prime)
-
-        total_generation_consumption_discrepancy = np.abs(np.sum(power_vector))
-        penalty_term = 10000 * total_generation_consumption_discrepancy # total power IO diff. should approx. be 0
         loss = np.dot(c, np.abs(rho)) + penalty_term
 
         if return_net_power_io_diff:
-            return loss, total_generation_consumption_discrepancy
+            return loss, mismatch
         else:
             return loss
-
-        # cost =  np.inner(c, x)
-
-        if return_net_power_io_diff:
-            return loss, total_generation_consumption_discrepancy
-        else:
-            return loss
-
-    def prepare_b_prime(self, num_edges: np.ndarray) -> np.ndarray:
-        e = lambda v, j: self.get_neighbor_nodes(v + 1)[j] - 1  # return j-th entry of neighbor nodes
-
-        # diagonal entries
-        b_prime_diags_row_indices = np.concatenate(
-            [[i] * d for i, d in enumerate(num_edges)])
-        b_prime_diags_col_indices = np.concatenate(
-            [np.arange(0, d) for i, d in enumerate(num_edges)])
-        b_prime_diags_col_indices = np.array(
-            [e(row, col) for row, col in zip(b_prime_diags_row_indices, b_prime_diags_col_indices, strict=True)] # 0-based
-        )
-
-        b_prime_diags = self.B[b_prime_diags_row_indices, b_prime_diags_col_indices].A1
-        b_prime = np.zeros(shape=(b_prime_diags.shape[0], b_prime_diags.shape[0]))
-
-        # off-diagonal
-        for i in range(self.n):
-            for k in range(num_edges[i]):
-                b_prime[i] = np.array([-self.B[i, e(i, k)]] * b_prime.shape[1])
-
-        np.fill_diagonal(b_prime, b_prime_diags)
-        return b_prime
-
-    def apply_decision_variables(self, x: np.ndarray) -> np.ndarray:
-        generator_indices = np.array(self.get_generator_indices(), dtype=int) - 1 # 0-based indexing
-        mask = np.zeros(len(self.busses), dtype=bool)
-        mask[generator_indices] = True
-
-        power_vector = self.P.toarray().flatten()
-        power_vector[mask] *= x
-        return power_vector
 
 
 if __name__ == '__main__':
