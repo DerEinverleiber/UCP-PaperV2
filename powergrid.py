@@ -57,6 +57,9 @@ class PowerGrid():
         self.branches = branches
         self.reference_bus_id = reference_bus_id
         self.n = len(self.busses) # Number of Busses
+        # Zero-based bus positions that actually contain generation.
+        self.generator_positions = [i for i, bus in enumerate(self.busses) if bus.generation > 0]
+        self.num_generators = len(self.generator_positions)
         self.graph = self.susceptance_graph(self.branches) # change attribute name?
         diag = np.array(self.graph.sum(axis=1)).flatten()
         self.B = diags(diag) - self.graph # Susceptibility Matrix
@@ -184,6 +187,37 @@ class PowerGrid():
         return graph
     
 
+    def expand_generator_bits(self, x: list[int] | np.ndarray | None = None) -> np.ndarray:
+        """
+        Expand a compressed generator-only bit string to a full bus-length vector.
+
+        Parameters
+        ----------
+        x : array_like, optional
+            Generator on/off vector of length self.num_generators. If None, all generators are on.
+
+        Returns
+        -------
+        np.ndarray
+            Full bus-length vector with zeros on pure load buses.
+        """
+        if x is None:
+            x = np.ones(self.num_generators, dtype=float)
+        x = np.asarray(x, dtype=float)
+
+        if x.ndim != 1:
+            raise ValueError(f'x must be a 1D array, got shape {x.shape}.')
+        if len(x) != self.num_generators:
+            raise ValueError(
+                f'x must have length equal to the number of generators ({self.num_generators}), '
+                f'got {len(x)}.'
+            )
+
+        x_full = np.zeros(self.n, dtype=float)
+        x_full[self.generator_positions] = x
+        return x_full
+
+    '''
     def net_power(self, busses: list[Bus], x=None, load_factor: float = 1.0) -> csr_matrix:
         """
         Compute net power injections: P_i = x_i * P_gen,i - P_load,i.
@@ -203,10 +237,25 @@ class PowerGrid():
         if x is None:
             x = np.ones(self.n, dtype=float)
         x = np.asarray(x, dtype=float)
-        return x * gen - load_factor * load
+        x_full = self.expand_generator_bits(x)
+        return x_full * gen - load_factor * load
+    '''
+
+    def net_power(self, busses: list[Bus], x=None, load_factor: float = 1.0) -> np.ndarray:
+        gen = np.array([bus.generation for bus in busses], dtype=float)
+        load = np.array([bus.load for bus in busses], dtype=float)
+        x_full = self.expand_generator_bits(x)
+        return x_full * gen - load_factor * load
+
 
     def get_generator_indices(self) -> list[int]:
         return [bus.idx for bus in self.busses if bus.generation > 0]
+    
+    def get_generator_positions(self) -> list[int]:
+        """Return 0-based array positions of generator buses."""
+        return self.generator_positions.copy()
+
+
    
     def solve_lse(self, P_update: np.ndarray = None):
         """
@@ -248,7 +297,7 @@ class PowerGrid():
 
         return rho
 
-    def loss_function(self, x: list[int], c: list[float] = None, load_factor: f = 1.0, mismatch_penalty = 1e4, return_net_power_io_diff: bool = True) -> float | tuple[float, float]:
+    def loss_function(self, x: list[int], c: list[float] = None, load_factor: float = 1.0, mismatch_penalty = 1e4, return_net_power_io_diff: bool = True) -> float | tuple[float, float]:
         """
         Compute total generation cost for a given generator on/off vector.
 
@@ -264,7 +313,7 @@ class PowerGrid():
             :param return_net_power_io_diff:
         """
         if x is None:
-            x = np.ones(self.n) # all generators are on
+            x = np.ones(self.num_generators) # all generators are on
         x = np.asarray(x)
 
         if c is None:
@@ -288,6 +337,15 @@ class PowerGrid():
             return loss, mismatch
         else:
             return loss
+        
+    def num_outgoing_branches(self) -> list[int]:
+        num_outgoing_branches = [0] * self.n
+        for branch in self.branches:
+            num_outgoing_branches[branch.from_bus - 1] += 1 # switch to 0-indexing
+
+        assert sum(num_outgoing_branches) == len(self.branches)
+        return num_outgoing_branches
+
 
 
 if __name__ == '__main__':
