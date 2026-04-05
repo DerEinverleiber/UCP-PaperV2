@@ -25,23 +25,19 @@ def construct_parallelization_arg_list(optimizers: list[SimulatedAnnealing], dep
     return list(itertools.product(list(enumerate(optimizers)), temp_iteration_batches))
 
 
-def extract_sorted_losses_and_temps(results: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """
-    :param results: np.ndarray of shape (n + 1,) containing:
-        column 0: id (corresponding to an optimizer process/dataset)
-        columns [1, n/2]: temperature iterations
-        columns [n/2 + 1, n]: losses corresponding to temperature iterations
-    :return:
-        sorted_temps: np.ndarray of shape (n/2,) containing: sorted temperature iterations (asc)
-        sorted_losses: np.ndarray of shape (n/2,) containing: losses sorted by temperature iterations (asc)
-    """
-    group_values = results[:, 0]
-    unique_values, inverse_indices = np.unique(group_values, return_inverse=True)
-    grouped_arrays = [results[inverse_indices == i][:, 1:] for i in range(len(unique_values))]
+def get_execute_sim_ann(init_temp: int, end_temp: int):
 
-    temperatures_and_losses = [tuple(b.flatten() for b in np.split(a, 2, axis=1)) for a in grouped_arrays]
-    sort_indices = [np.array(np.argsort(temps), dtype=int) for temps, _ in temperatures_and_losses]
-    sorted_losses = np.array([losses[sort_indices[i]] for i, (_, losses) in enumerate(temperatures_and_losses)])
-    sorted_temps = np.array([temps[sort_indices[i]] for i, (temps, _) in enumerate(temperatures_and_losses)])
+    def execute_sim_ann(df_id: int, sim_ann: SimulatedAnnealing, temp_iterations: list[int]) -> np.ndarray:
+        optima = []
+        for iterations in temp_iterations:
+            print(f"Temp. Iterations {iterations}")
+            temp_schedule = SimulatedAnnealing.geometric_temp_schedule(init_temp, end_temp, iterations)
+            _, loss = sim_ann.optimize(
+                temp_schedule=temp_schedule,
+                verbose=False
+            )
+            optima.append(loss)
 
-    return sorted_temps, sorted_losses
+        return np.dstack((np.full(len(temp_iterations), df_id), temp_iterations, optima))
+
+    return execute_sim_ann
