@@ -11,8 +11,9 @@ def min_tts(p_star: np.ndarray, l_p: np.ndarray = None, return_tts_p = False):
 
     assert p_star.shape == l_p.shape
 
-    epsilon = 0.000001 # numerical stability?
-    tts_p = l_p * np.ceil(np.log(0.01) / (np.log(1 - p_star - epsilon)))
+    with np.errstate(divide='ignore', invalid='ignore'): # suppress divide by zero error - np.where filters this
+        tts_p = np.where(p_star > 0, l_p * np.ceil(np.log(0.01) / (np.log(1 - p_star))), np.inf)
+
     p_min_0_based = tts_p.argmin()
 
     if return_tts_p:
