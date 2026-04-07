@@ -20,12 +20,18 @@ def construct_parallelization_arg_list(optimizers: list[SimulatedAnnealing], dep
     iterations_reverse = iterations[::-1]
 
     stacked = np.array_split(np.vstack((iterations, iterations_reverse)),  2 * num_batches, axis=1)
-    temp_iteration_batches = [a.flatten() for a in stacked][:len(stacked)//2] # first half contains all iterations
+    temp_iteration_batches = [np.unique(a.flatten()) for a in stacked][:len(stacked)//2] # first half contains all iterations
 
     return list(itertools.product(list(enumerate(optimizers)), temp_iteration_batches))
 
 
 def get_execute_sim_ann(init_temp: int, end_temp: int):
+    """
+    Prepares a function to run simulated annealing optimization in parallel.
+    :param init_temp: initial temperature for geometric temperature schedule (e.g. 1000)
+    :param end_temp: final temperature for geometric temperature schedule (e.g. 1)
+    :return:
+    """
 
     def execute_sim_ann(df_id: int, sim_ann: SimulatedAnnealing, temp_iterations: list[int]) -> np.ndarray:
         optima = []
