@@ -10,7 +10,9 @@ from powergrid import PowerGrid
 
 def brute_force(
         grid: PowerGrid, bounds: list[tuple[int, int]],
-        c: list[int], write_to_file: bool | str = True,
+        c: list[int] | np.ndarray,
+        load_factor: float = 1.0,
+        write_to_file: bool | str = True,
         num_chunks: int = 20,
         start_from: tuple[int] = None,
         verbose: int = 2
@@ -44,7 +46,7 @@ def brute_force(
 
     for i, chunk in enumerate(chunks):
         for x in chunk:
-            loss, net_power_io_diff = grid.loss_function(list(x), c, return_net_power_io_diff=True)
+            loss, net_power_io_diff = grid.loss_function(list(x), c=c, load_factor=load_factor, return_net_power_io_diff=True)
             if loss < best_loss:
                 best_loss = loss
                 best_candidate = x
@@ -68,7 +70,7 @@ if __name__ == '__main__':
     seeds = list(range(1, 5))
 
     num_generatorss = list(range(1, 41))
-
+    cartesian_product = list(itertools.product(num_generatorss, seeds))
     cartesian_product = list(itertools.product(num_generatorss, seeds))
 
     def execute_brute_force(n: int, num_generators: int, seed: int) -> None:
