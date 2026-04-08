@@ -9,7 +9,14 @@ class SimulatedAnnealing:
     
     def __init__(self, lookup_table: pd.DataFrame | str, bounds: list[tuple[int, int]], temp_schedule: np.ndarray = None):
         if isinstance(lookup_table, str):
-            self.lookup_table = pd.read_csv(lookup_table)
+            try:
+                self.lookup_table = pd.read_csv(lookup_table)
+            except FileNotFoundError:
+                print(f"Error: File not found at {lookup_table}")
+                raise
+            except Exception as e:
+                print(f"Error reading CSV: {e}")
+                raise
         else:
             self.lookup_table = lookup_table
         self.bounds = bounds
