@@ -9,7 +9,14 @@ class SimulatedAnnealing:
     
     def __init__(self, lookup_table: pd.DataFrame | str, bounds: list[tuple[int, int]], temp_schedule: np.ndarray = None):
         if isinstance(lookup_table, str):
-            self.lookup_table = pd.read_csv(lookup_table)
+            try:
+                self.lookup_table = pd.read_csv(lookup_table)
+            except FileNotFoundError:
+                print(f"Error: File not found at {lookup_table}")
+                raise
+            except Exception as e:
+                print(f"Error reading CSV: {e}")
+                raise
         else:
             self.lookup_table = lookup_table
         self.bounds = bounds
@@ -25,7 +32,7 @@ class SimulatedAnnealing:
             for i in range(1000):
                 index = np.random.choice(range(len(x)), size=1)[0]
                 up_or_down = np.random.choice([-1, 1], size=1)[0]
-                if self.bounds[index][0] <= x[index] + up_or_down < self.bounds[index][1]: # should lower bound be exclusive as well?
+                if self.bounds[index][0] <= x[index] + up_or_down <= self.bounds[index][1]: # should lower bound be exclusive as well?
                     x[index] += up_or_down
                     return x
     
@@ -47,7 +54,7 @@ class SimulatedAnnealing:
                 temp_schedule = self.temp_schedule
         neighborhood_fun = neighborhood_fun or self.bounds_to_neighborhood_function()
 
-        x = np.array([np.random.choice(np.arange(low, high), size=1)[0] for low, high in self.bounds]) # check again
+        x = np.array([np.random.choice(np.arange(low, high + 1), size=1)[0] for low, high in self.bounds]) # check again
         loss = self.lookup_table.loc[self.lookup_table['candidate'] == str(x), 'loss'].iloc[0]
         best_x = x
         best_loss = loss

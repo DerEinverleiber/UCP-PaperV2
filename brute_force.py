@@ -10,7 +10,9 @@ from powergrid import PowerGrid
 
 def brute_force(
         grid: PowerGrid, bounds: list[tuple[int, int]],
-        c: list[int], write_to_file: bool | str = True,
+        c: list[int] | np.ndarray,
+        load_factor: float = 1.0,
+        write_to_file: bool | str = True,
         num_chunks: int = 20,
         start_from: tuple[int] = None,
         verbose: int = 2
@@ -44,7 +46,7 @@ def brute_force(
 
     for i, chunk in enumerate(chunks):
         for x in chunk:
-            loss, net_power_io_diff = grid.loss_function(list(x), c, return_net_power_io_diff=True)
+            loss, net_power_io_diff = grid.loss_function(list(x), c=c, load_factor=load_factor, return_net_power_io_diff=True)
             if loss < best_loss:
                 best_loss = loss
                 best_candidate = x
@@ -65,11 +67,11 @@ def brute_force(
 
 
 if __name__ == '__main__':
-    seeds = list(range(1, 11))
+    seeds = list(range(1, 5))
 
-    num_generatorss = list(range(1, 21))
-
-    cartesian_product = list(itertools.product(seeds, num_generatorss))
+    num_generatorss = list(range(1, 41))
+    cartesian_product = list(itertools.product(num_generatorss, seeds))
+    cartesian_product = list(itertools.product(num_generatorss, seeds))
 
     def execute_brute_force(n: int, num_generators: int, seed: int) -> None:
         np.random.seed(seed)
@@ -78,7 +80,7 @@ if __name__ == '__main__':
 
         rng = np.random.default_rng(seed)
 
-        file_name = f"candidate_space_{2**num_generators}_candidates_{n}_buses_{seed}_seed_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+        file_name = f"test/candidate_space_{2**num_generators}_candidates_{n}_buses_{seed}_seed_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
         best_candidate, best_loss, best_dis = brute_force(
             grid,
             bounds=[(0, 1)] * num_generators,
@@ -91,5 +93,5 @@ if __name__ == '__main__':
         print("Best loss:", best_loss)
         print("Best discrepancy", best_dis)
 
-    Parallel(n_jobs=-1, verbose=11)(delayed(execute_brute_force)(n=20, num_generators=num_generators, seed=seed) for num_generators, seed in cartesian_product)
+    Parallel(n_jobs=-1, verbose=11)(delayed(execute_brute_force)(n=40, num_generators=num_generators, seed=seed) for num_generators, seed in cartesian_product)
 
