@@ -7,7 +7,7 @@ import pandas as pd
 
 class SimulatedAnnealing:
     
-    def __init__(self, lookup_table: pd.DataFrame | str, bounds: list[tuple[int, int]], temp_schedule: np.ndarray = None):
+    def __init__(self, lookup_table: pd.DataFrame | str, bounds: list[tuple[int, int]] | int, temp_schedule: np.ndarray = None) -> None:
         if isinstance(lookup_table, str):
             try:
                 self.lookup_table = pd.read_csv(lookup_table)
@@ -19,7 +19,11 @@ class SimulatedAnnealing:
                 raise
         else:
             self.lookup_table = lookup_table
-        self.bounds = bounds
+
+        if type(bounds) is int:
+            self.bounds = [(0, 1)] * bounds
+        else:
+            self.bounds = bounds
         self.temp_schedule = temp_schedule
         self.history: list[tuple[list[int], float]] = []
 
