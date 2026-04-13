@@ -14,7 +14,7 @@ def construct_parallelization_arg_list(optimizers: list[SimulatedAnnealing], dep
     :return: arg_list: list of arguments to be used for parallel execution of optimization tasks
     """
     assert step * batch_size <= depth, "step * batch_size must be smaller than depth (otherwise arg_list will be empty)"
-    num_batches = depth / (batch_size * step)
+    num_batches = np.ceil(depth / (1.0 * batch_size * step))
 
     iterations = np.arange(1, depth + 1, step=step)
     iterations_reverse = iterations[::-1]
@@ -33,7 +33,7 @@ def get_execute_sim_ann(init_temp: int, end_temp: int):
     :return:
     """
 
-    def execute_sim_ann(df_id: int, sim_ann: SimulatedAnnealing, temp_iterations: list[int]) -> np.ndarray:
+    def execute_sim_ann(df_id: int, sim_ann: SimulatedAnnealing, temp_iterations: list[int]) -> tuple[int, np.ndarray]:
         optima = []
         for iterations in temp_iterations:
             print(f"Temp. Iterations {iterations}")
@@ -44,6 +44,6 @@ def get_execute_sim_ann(init_temp: int, end_temp: int):
             )
             optima.append(loss)
 
-        return np.dstack((np.full(len(temp_iterations), df_id), temp_iterations, optima))
+        return df_id, np.dstack((temp_iterations, optima))
 
     return execute_sim_ann
