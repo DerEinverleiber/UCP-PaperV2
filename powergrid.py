@@ -100,7 +100,7 @@ class PowerGrid():
         return cls(busses, branches)
     
     @classmethod
-    def random(cls, n: int, num_generators: int, max_ratio: float = 10e-1, min_reactance :float =10e-2, seed=1234) -> "PowerGrid":
+    def random(cls, n: int, num_generators: int, max_ratio: float = 10e-1, min_reactance :float =10e-2) -> "PowerGrid":
         """
         Generate a random, connected power grid network for DC power flow experiments.
 
@@ -133,29 +133,28 @@ class PowerGrid():
         PowerGrid
             Instance of PowerGrid with randomly generated buses and branches.
         """
-        rng = np.random.default_rng(seed)
 
-        generator_indices = rng.choice(list(range(n)), size=num_generators, replace=False)
+        generator_indices = np.random.choice(list(range(n)), size=num_generators, replace=False)
         generations = np.zeros(n, dtype=float)
-        generations[generator_indices] += rng.uniform(1e-2, 1, size=num_generators)
+        generations[generator_indices] += np.random.uniform(1e-2, 1, size=num_generators)
 
-        loads = rng.uniform(0, 1, n)
+        loads = np.random.uniform(0, 1, n)
 
         edges = []
         nodes = list(range(n))
-        rng.shuffle(nodes)
+        np.random.shuffle(nodes)
         for i in range(1, n):
             edges.append((nodes[i-1], nodes[i]))
 
         num_extra = n // 2
         for _ in range(num_extra):
-            a, b = rng.choice(n, size=2, replace=False)
+            a, b = np.random.choice(n, size=2, replace=False)
             if (a, b) not in edges and (b, a) not in edges:
                 edges.append((a,b))
 
         num_edges = len(edges)
-        reactances = rng.uniform(min_reactance, 1, num_edges)
-        resistances = rng.uniform(0, max_ratio, num_edges)
+        reactances = np.random.uniform(min_reactance, 1, num_edges)
+        resistances = np.random.uniform(0, max_ratio, num_edges)
 
         branches = [Branch(from_bus=i+1, to_bus=j+1, reactance=reactances[k],
                            resistance=resistances[k]) for k, (i, j) in enumerate(edges)]

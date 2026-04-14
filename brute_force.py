@@ -40,7 +40,7 @@ def brute_force(
     if write_to_file:
         file_name = write_to_file if isinstance(write_to_file, str) else \
             f"candidate_space_{len(cartesian_product)}_instances_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv"
-        file = open(f"data/brute_force/{file_name}", 'w', newline='')
+        file = open(f"{file_name}", 'w', newline='')
         writer = csv.writer(file)
         writer.writerow(['candidate', 'loss', 'abs. diff. net power IO'])
 
@@ -64,34 +64,4 @@ def brute_force(
 
 
     return best_candidate, best_loss, best_net_power_io_diff
-
-
-if __name__ == '__main__':
-    seeds = list(range(1, 5))
-
-    num_generatorss = list(range(1, 41))
-    cartesian_product = list(itertools.product(num_generatorss, seeds))
-    cartesian_product = list(itertools.product(num_generatorss, seeds))
-
-    def execute_brute_force(n: int, num_generators: int, seed: int) -> None:
-        np.random.seed(seed)
-        grid = PowerGrid.random(n=n, num_generators=num_generators,  seed=seed)
-        print("Generators indices:", num_generators)
-
-        rng = np.random.default_rng(seed)
-
-        file_name = f"test/candidate_space_{2**num_generators}_candidates_{n}_buses_{seed}_seed_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
-        best_candidate, best_loss, best_dis = brute_force(
-            grid,
-            bounds=[(0, 1)] * num_generators,
-            c=rng.uniform(0, 1, size=sum(grid.num_outgoing_branches())),
-            write_to_file=file_name,
-            verbose=1
-        )
-
-        print("Best candidate:", best_candidate)
-        print("Best loss:", best_loss)
-        print("Best discrepancy", best_dis)
-
-    Parallel(n_jobs=-1, verbose=11)(delayed(execute_brute_force)(n=40, num_generators=num_generators, seed=seed) for num_generators, seed in cartesian_product)
 
