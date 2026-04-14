@@ -39,7 +39,7 @@ def brute_force(
 
     if write_to_file:
         file_name = write_to_file if isinstance(write_to_file, str) else \
-            f"candidate_space_{len(cartesian_product)}_instances_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.csv"
+            f"candidate_space_{len(cartesian_product)}_instances_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
         file = open(f"{file_name}", 'w', newline='')
         writer = csv.writer(file)
         writer.writerow(['candidate', 'loss', 'abs. diff. net power IO'])
