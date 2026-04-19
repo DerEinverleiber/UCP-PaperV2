@@ -33,10 +33,9 @@ def get_execute_sim_ann(init_temp: int, end_temp: int):
     :return:
     """
 
-    def execute_sim_ann(df_id: int, sim_ann: SimulatedAnnealing, temp_iterations: list[int]) -> tuple[int, np.ndarray]:
+    def execute_sim_ann(sim_ann: SimulatedAnnealing, temp_iterations: list[int]) -> np.ndarray:
         optima = []
         for iterations in temp_iterations:
-            print(f"Temp. Iterations {iterations}")
             temp_schedule = SimulatedAnnealing.geometric_temp_schedule(init_temp, end_temp, iterations)
             _, loss = sim_ann.optimize(
                 temp_schedule=temp_schedule,
@@ -44,6 +43,6 @@ def get_execute_sim_ann(init_temp: int, end_temp: int):
             )
             optima.append(loss)
 
-        return df_id, np.dstack((temp_iterations, optima))
+        return np.dstack((temp_iterations, optima))
 
     return execute_sim_ann
