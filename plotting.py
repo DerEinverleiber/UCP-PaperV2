@@ -3,7 +3,7 @@ import seaborn as sns
 
 
 def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, labels: tuple[str, str],
-                       color: tuple[int, int, int], regplot: bool = False):
+                       color: tuple[float, float, float], regplot: bool = False, set_xticks: bool = False):
     ax.plot(
         xs,
         means,
@@ -13,7 +13,8 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         color=color
     )
 
-    ax.set_xticks(xs)
+    if set_xticks:
+        ax.set_xticks(xs)
 
     ax.errorbar(
         xs,
@@ -33,7 +34,9 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         sns.regplot(x=xs, y=means, color=color, ax=ax, line_kws={'linestyle': "--", 'linewidth': 1.0}, ci=None,
                     logx=True)
 
-def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, load_factors, labels: tuple[str, str], palette: list[tuple[int, int, int]], regplot: bool = False) -> None:
+def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
+                         load_factors, labels: tuple[str, str], palette: list[tuple[float, float, float]],
+                         regplot: bool = False, set_xticks: bool = False) -> None:
     for i, (load_factor, mean, std) in enumerate(zip(load_factors, means, stds)):
         ax.plot(
             xs,
@@ -45,7 +48,8 @@ def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray
             label=f'Load: {load_factor}'
         )
 
-        ax.set_xticks(xs)
+        if set_xticks:
+            ax.set_xticks(xs)
 
         ax.errorbar(
             xs,
