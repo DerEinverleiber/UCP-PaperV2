@@ -7,7 +7,9 @@ def raar(expected_loss: float, loss_space: np.ndarray | pd.Series) -> float:
     return (mean - expected_loss) / (mean - minimum)
 
 def tts_p(p_star, l_p: np.ndarray = None) -> np.ndarray:
-    l_p = l_p or np.ones(p_star.shape)
+    if not l_p:
+        l_p = p_star.copy()
+        l_p[..., :] = np.arange(1, p_star.shape[-1] + 1, step=1) # l(p) = p
 
     assert p_star.shape == l_p.shape
 
