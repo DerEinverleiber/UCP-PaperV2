@@ -150,12 +150,14 @@ def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
     perr_log = np.mean(np.sqrt(np.diag(pcov_log)))
 
     if perr_linear < perr_log:
+        base = 10 ** popt_linear[0]
+        label = rf'Fit: ${base:.3f}^{{N}}$'
         ax.plot(xs, 10**linear_model(xs, *popt_linear),
-                      label='Linear fit: a=%5.3f, b=%5.3f' % tuple(popt_linear), linestyle='dashed')
+                      label=label, linestyle='dashed', color=palette[0])
     else:
         ax.plot(xs, 10**log_model(xs, *popt_log),
                       label='Log fit: a=%5.3f, b=%5.3f, c=%5.3f, d=%5.3f, n=%5.3f' % tuple(popt_log),
-                      linestyle='dashed')
+                      linestyle='dashed', color=palette[0])
 
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
@@ -222,12 +224,14 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
         perr_log = np.mean(np.sqrt(np.diag(pcov_log)))
 
         if perr_linear < perr_log:
+            base = 10 ** popt_linear[0]
+            label = rf'${base:.3f}^{{N}}$'
             ax.plot(xs, 10**linear_model(xs, *popt_linear),
-                          label='Linear fit: a=%5.3f, b=%5.3f' % tuple(popt_linear), linestyle='dashed')
+                          label=label, linestyle='dashed', color=palette[i])
         else:
             ax.plot(xs, 10**log_model(xs, *popt_log),
                           label='Log fit: a=%5.3f, b=%5.3f, c=%5.3f, d=%5.3f, n=%5.3f' % tuple(popt_log),
-                          linestyle='dashed')
+                          linestyle='dashed', color=palette[i])
 
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
