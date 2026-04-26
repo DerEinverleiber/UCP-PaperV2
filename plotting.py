@@ -65,7 +65,6 @@ def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray
             linewidth=1.6,
             markersize=3.5,
             color=palette[i],
-            label=f'Load: {load_factor}'
         )
 
         if set_xticks:
@@ -79,7 +78,8 @@ def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray
             capsize=3,
             color=palette[i],
             alpha=0.7,
-            linewidth=1.6
+            linewidth=1.6,
+            label=f'load={load_factor}'
         )
 
         if regplot:
@@ -191,7 +191,6 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
             linewidth=1.6,
             markersize=3.5,
             color=palette[i],
-            label=f'Load: {load_factor}'
         )
 
         if set_xticks:
@@ -206,7 +205,8 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
             capsize=3,
             color=palette[i],
             alpha=0.7,
-            linewidth=1.6
+            linewidth=1.6,
+            label=f'load={load_factor}'
         )
 
         popt_linear, pcov_linear = curve_fit(f=linear_model, xdata=xs, ydata=log_mean_clipped, nan_policy='omit')
