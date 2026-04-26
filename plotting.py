@@ -4,7 +4,11 @@ from scipy.optimize import curve_fit
 
 
 def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, labels: tuple[str, str],
-                       color: tuple[float, float, float], regplot: bool | str = False, set_xticks: bool = False, logy: bool = False):
+                       color: tuple[float, float, float], regplot: bool | str = False, set_xticks: bool = False, logy: bool = False,
+                       ylim: tuple[float, float] = None):
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
     if logy:
         ax.set_yscale('log')
 
@@ -46,7 +50,10 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
 
 def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
                          load_factors, labels: tuple[str, str], palette: list[tuple[float, float, float]],
-                         regplot: bool | str = False, set_xticks: bool = False, logy: bool = False) -> None:
+                         regplot: bool | str = False, set_xticks: bool = False, logy: bool = False,
+                         ylim: tuple[float, float] = None):
+    if ylim is not None:
+        ax.set_ylim(*ylim)
     if logy:
         ax.set_yscale('log')
 
