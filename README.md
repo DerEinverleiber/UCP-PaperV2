@@ -12,7 +12,7 @@ Code accompanying the paper *Scaling Quantum Simulation-Based Optimization: Demo
 ## Installation
 
 ```bash
-pip install pennylane numpy scipy matplotlib
+pip install -r requirements.txt
 ```
 
 ---
