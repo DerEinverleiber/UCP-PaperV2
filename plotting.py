@@ -177,7 +177,8 @@ def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
 
 
 def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
-                         load_factors, labels: tuple[str, str], palette: list[tuple[float, float, float]], set_xticks: bool = False) -> None:
+                         labels: tuple[str, str], palette: list[tuple[float, float, float]], set_xticks: bool = False,
+                                       line_labels: list[str] = None) -> None:
     ax.set_yscale('log')
 
     mask = np.isfinite(means).all(axis=0)
@@ -218,7 +219,7 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
             color=palette[i],
             alpha=0.7,
             linewidth=1.6,
-            label=f'load={load_factor}'
+            label=line_labels[i] if line_labels else None
         )
 
         popt_linear, pcov_linear = curve_fit(f=linear_model, xdata=xs, ydata=log_mean_clipped, nan_policy='omit')
