@@ -48,10 +48,10 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         sns.regplot(x=xs, y=means, color=color, ax=ax, line_kws={'linestyle': "--", 'linewidth': 1.0}, ci=None,
                     logx=reg_logx, dropna=True)
 
-def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
-                         load_factors, labels: tuple[str, str], palette: list[tuple[float, float, float]],
-                         regplot: bool | str = False, set_xticks: bool = False, logy: bool = False,
-                         ylim: tuple[float, float] = None):
+def plot_per_label(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
+                   line_labels: list[str], labels: tuple[str, str], palette: list[tuple[float, float, float]],
+                   regplot: bool | str = False, set_xticks: bool = False, logy: bool = False,
+                   ylim: tuple[float, float] = None):
     if ylim is not None:
         ax.set_ylim(*ylim)
     if logy:
@@ -63,7 +63,7 @@ def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray
         stds = stds[:, mask]
         xs = xs[mask]
 
-    for i, (load_factor, mean, std) in enumerate(zip(load_factors, means, stds)):
+    for i, (line_label, mean, std) in enumerate(zip(line_labels, means, stds)):
 
         ax.plot(
             xs,
@@ -86,7 +86,7 @@ def plot_per_load_factor(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray
             color=palette[i],
             alpha=0.7,
             linewidth=1.6,
-            label=f'load={load_factor}'
+            label=line_label
         )
 
         if regplot:
