@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-
+import pickle
+from qaoa_pipeline import QAOA_circuit
 def raar(expected_loss: float, loss_space: np.ndarray | pd.Series) -> float:
     mean = loss_space.mean()
     minimum = loss_space.min()
@@ -24,4 +25,66 @@ def min_tts(p_star: np.ndarray, l_p: np.ndarray = None, return_tts_p = False, ax
     if return_tts_p:
         return p_min_0_based + 1, min_values, tts_p_
 
-    return min_values
+    return p_min_0_based + 1, tts_p[p_min_0_based]
+
+def raar_qaoa(bf_file, params_file):
+    df = pd.read_csv(bf_file)
+    costs = df['loss'].astype(float).values
+    # Min-max normalization
+    costs = (costs - np.min(costs)) / (np.max(costs) - np.min(costs))
+    mean = np.mean(costs)
+    min = np.min(costs)
+    # Take expectation value w.r.t. trial state psi(gammas, betas)
+    with open(params_file, 'rb') as f:
+        pkl = pickle.load(f)
+    gammas = pkl['gammas']
+    betas = pkl['betas']
+    n = int(np.log2(pkl['num_generators']))
+    p = len(gammas) # can generally be larger than p0 due to Iterative Interpolation
+    qaoa_circuit = QAOA_circuit(n=n, p=p, costs=costs)
+    trial_energy = qaoa_circuit.cost_function((gammas, betas))
+    # return RAAR 
+    return (mean - trial_energy)/(mean - min)
+
+def ar_qaoa(bf_file, params_file):
+    df = pd.read_csv(bf_file)
+    costs = df['loss'].astype(float).values
+    # Min-max normalization
+    costs = (costs - np.min(costs)) / (np.max(costs) - np.min(costs))
+    min = np.min(costs)
+    max = np.max(costs)
+    with open(params_file, 'rb') as f:
+        pkl = pickle.load(f)
+    gammas = pkl['gammas']
+    betas = pkl['betas']
+    n = int(np.log2(pkl['num_generators']))
+    p = len(gammas) # can generally be larger than p0 due to Iterative Interpolation
+    qaoa_circuit = QAOA_circuit(n=n, p=p, costs=costs)
+    trial_energy = qaoa_circuit.cost_function((gammas, betas))
+    
+    return 1 - (trial_energy - min) / (max - min)
+
+def tts_qaoa(bf_file, params_file):
+    df = pd.read_csv(bf_file)
+    costs = df['loss'].astype(float).values
+    # Min-max normalization
+    costs = (costs - np.min(costs)) / (np.max(costs) - np.min(costs))
+    min = np.min(costs)
+    optimal_indices = np.where(np.isclose(costs, min))[0]
+
+    with open(params_file, 'rb') as f:
+        pkl = pickle.load(f)
+    gammas = pkl['gammas']
+    betas = pkl['betas']
+    n = int(np.log2(pkl['num_generators']))
+    p = len(gammas) # can generally be larger than p0 due to Iterative Interpolation
+    qaoa_circuit = QAOA_circuit(n=n, p=p, costs=costs)
+    
+    probs = qaoa_circuit.distribution((gammas, betas))
+    p_star = np.sum(probs[optimal_indices])
+
+    return np.where(
+        p_star > 0,
+        p * np.ceil(np.log(0.01) / np.log(1 - p_star)),
+        np.inf
+        )

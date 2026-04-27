@@ -17,41 +17,6 @@ class Branch:
     resistance: float # New: added attribute
 
 class PowerGrid():
-    """
-    Representation of a power grid network using the DC power flow approximation.
-
-    Attributes
-    ----------
-    busses : list[Bus]
-        List of buses in the network (loads, generators).
-    branches : list[Branch]
-        List of branches (transmission lines) connecting buses.
-    reference_bus_id : int
-        Index of the slack/reference bus (default 0).
-    n : int
-        Number of buses in the network.
-    graph : csr_matrix
-        Weighted adjacency matrix of branch susceptances.
-    B : csr_matrix
-        Susceptance (Laplacian-like) matrix for DC power flow.
-    P : csr_matrix
-        Net power injections vector (P_gen - P_load) assuming all generators on.
-
-    Methods
-    -------
-    ieee57()
-        Load the IEEE 57-bus test system.
-    random(n)
-        Generate a random network of n buses (placeholder).
-    susceptance_graph(branches)
-        Build adjacency matrix of branch susceptances from branch data.
-    net_power(busses, x=None)
-        Compute net injections for a given on/off vector x.
-    solve_lse(P_update=None)
-        Solve B θ = P for bus voltage angles θ.
-    loss_function(x=None, c=None)
-        Compute total generation cost for a given on/off vector x.
-    """
     def __init__(self, busses: list[Bus], branches: list[Branch], reference_bus_id: int = 0): 
         self.busses = busses
         self.branches = branches
@@ -65,40 +30,6 @@ class PowerGrid():
         self.B = diags(diag) - self.graph # Susceptibility Matrix
         self.P = self.net_power(self.busses) # initial power vector (all generators are turned on)
 
-    @classmethod
-    def ieee57(cls) -> "PowerGrid":
-        """
-        Load the IEEE 57-bus test system.
-
-        The network is modeled as a graph:
-        - Nodes correspond to buses with loads and/or generators.
-        - Edges represent transmission lines connecting buses.
-        - Edge weights are branch reactances used in DC power flow calculations.
-
-        Data sources:
-        - Branch data: 'ieee57_branch.csv' (includes resistance and reactance)
-        - Bus data: 'bus_data_short.csv' (loads and generation)
-
-        Notes
-        -----
-        - Generation in MW, loads in MW.
-        - Reactive power and AC effects are ignored (DC approximation).
-        - A bus with zero generation is treated as a pure load.
-        """
-        branch_data = np.loadtxt('data/ieee57_branch.csv', delimiter=',', skiprows=1, dtype=str)
-        tap_bus_number = np.array(branch_data[:, 0], dtype=int) # units?
-        z_bus_number = np.array(branch_data[:, 1], dtype=int) #
-        branch_reactance = np.array(branch_data[:, 7], dtype=float) 
-        branch_resistance = np.array(branch_data[:, 6], dtype=float)
-
-        bus_data = np.loadtxt('data/bus_data_short.csv', delimiter=',', skiprows=1, dtype=float)
-        bus_number, bus_load, bus_generation, bus_generation_MVAR = bus_data.T
-
-        branches = [Branch(tap_bus_number[i], z_bus_number[i], branch_reactance[i], branch_resistance[i]) for i in range(len(branch_data))]
-        busses = [Bus(bus_number[i], bus_load[i], bus_generation[i]) for i in range(len(bus_data))]
-
-        return cls(busses, branches)
-    
     @classmethod
     def random(cls, n: int, num_generators: int, max_ratio: float = 10e-1, min_reactance :float =10e-2) -> "PowerGrid":
         """
@@ -125,9 +56,7 @@ class PowerGrid():
             Maximum resistance relative to reactance (default 0.1).
         min_reactance : float, optional
             Minimum reactance value (default 0.01).
-        seed : int, optional
-            Random seed for reproducibility (default 1234).
-
+        
         Returns
         -------
         PowerGrid
@@ -165,19 +94,7 @@ class PowerGrid():
 
 
     def susceptance_graph(self, branches: list[Branch]):
-        """
-        Build the weighted adjacency matrix of branch susceptances.
-
-        Parameters
-        ----------
-        branches : list[Branch]
-            List of transmission lines with reactance and resistance.
-
-        Returns
-        -------
-        csr_matrix
-            Sparse symmetric matrix of susceptances (shape = n x n).
-        """
+       
         edges = [(branch.from_bus-1, branch.to_bus-1) for branch in branches] # switch to 0-indexing
         rows, cols = zip(*edges)
         susceptances = [branch.reactance/(branch.resistance**2 + branch.reactance**2) for branch in branches] # New: we are no longer using taylor expansion
@@ -187,19 +104,7 @@ class PowerGrid():
     
 
     def expand_generator_bits(self, x: list[int] | np.ndarray | None = None) -> np.ndarray:
-        """
-        Expand a compressed generator-only bit string to a full bus-length vector.
-
-        Parameters
-        ----------
-        x : array_like, optional
-            Generator on/off vector of length self.num_generators. If None, all generators are on.
-
-        Returns
-        -------
-        np.ndarray
-            Full bus-length vector with zeros on pure load buses.
-        """
+       
         if x is None:
             x = np.ones(self.num_generators, dtype=float)
         x = np.asarray(x, dtype=float)
@@ -215,30 +120,6 @@ class PowerGrid():
         x_full = np.zeros(self.n, dtype=float)
         x_full[self.generator_positions] = x
         return x_full
-
-    '''
-    def net_power(self, busses: list[Bus], x=None, load_factor: float = 1.0) -> csr_matrix:
-        """
-        Compute net power injections: P_i = x_i * P_gen,i - P_load,i.
-
-        Parameters
-        ----------
-        busses : list[Bus] — buses with load and generation.
-        x : array_like, optional — generator on/off vector (1 = on, 0 = off). Defaults to all on.
-
-        Returns
-        -------
-        csr_matrix
-            Sparse column vector of net injections (n x 1).
-        """
-        gen = np.array([bus.generation for bus in busses], dtype=float)
-        load = np.array([bus.load for bus in busses], dtype=float)
-        if x is None:
-            x = np.ones(self.n, dtype=float)
-        x = np.asarray(x, dtype=float)
-        x_full = self.expand_generator_bits(x)
-        return x_full * gen - load_factor * load
-    '''
 
     def net_power(self, busses: list[Bus], x=None, load_factor: float = 1.0) -> np.ndarray:
         gen = np.array([bus.generation for bus in busses], dtype=float)
@@ -257,18 +138,7 @@ class PowerGrid():
 
    
     def solve_lse(self, P_update: np.ndarray = None):
-        """
-        Solve the linear system B θ = P for bus voltage angles (DC approximation).
-
-        Parameters
-        ----------
-        P_update : csr_matrix, optional — net injections vector. Defaults to self.P.
-
-        Returns
-        -------
-        np.ndarray
-            Voltage angles θ (radians) at all buses (length n), with reference bus at 0.
-        """
+       
         if P_update is None:
             P_update = self.P.copy()
         else:
@@ -297,20 +167,7 @@ class PowerGrid():
         return rho
 
     def loss_function(self, x: list[int], c: list[float] = None, load_factor: float = 1.0, mismatch_penalty = 1e4, return_net_power_io_diff: bool = True) -> float | tuple[float, float]:
-        """
-        Compute total generation cost for a given generator on/off vector.
-
-        Parameters
-        ----------
-        x : list[int], optional — generator on/off vector (1 = on, 0 = off). Defaults to all on.
-        c : list[float], optional — cost per generator. Defaults to zeros.
-
-        Returns
-        -------
-        float
-            Total generation cost.
-            :param return_net_power_io_diff:
-        """
+        
         if x is None:
             x = np.ones(self.num_generators) # all generators are on
         x = np.asarray(x)

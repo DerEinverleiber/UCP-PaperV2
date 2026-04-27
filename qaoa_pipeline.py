@@ -1,5 +1,4 @@
 import pennylane as qml
-#from pennylane import numpy as np
 import numpy as np
 
 class QAOA_circuit:
@@ -22,26 +21,16 @@ class QAOA_circuit:
         self.wires = range(self.n)
         assert costs.shape == (2**n,)
         
-        self.cost_h = qml.Hermitian(np.diag(self.costs), wires=self.wires)
         self.mix_h = qml.qaoa.mixers.x_mixer(wires=range(self.n))
-        self.dev = qml.device("default.qubit", wires=len(self.wires)) # or lightning?
-        self.qnode = qml.QNode(self._qnode, self.dev)
-        self.prob_qnode = qml.QNode(self._prob_qnode, self.dev)   # NEW
+        self.dev = qml.device("default.qubit", wires=len(self.wires)) 
+        self.prob_qnode = qml.QNode(self._prob_qnode, self.dev)  
 
-    
-    def _qnode(self, gammas, betas):
-        self.circuit(gammas, betas)
-        return qml.expval(self.cost_h)
-    
-    def _prob_qnode(self, gammas, betas):   # NEW
+    def _prob_qnode(self, gammas, betas):  
         self.circuit(gammas, betas)
         return qml.probs(wires=self.wires)
     
-    def qaoa_layer(self, gamma, beta):
-        #qml.qaoa.layers.cost_layer(gamma, self.cost_h)
-        #qml.qaoa.layers.mixer_layer(beta, self.mix_h)
-        phases = qml.numpy.exp(-1j * gamma * self.costs)
-        qml.DiagonalQubitUnitary(phases, wires=self.wires)
+    def qaoa_layer(self, gamma, beta):   
+        qml.DiagonalQubitUnitary(qml.math.exp(-1j * gamma * self.costs), wires=self.wires)
         qml.qaoa.layers.mixer_layer(beta, self.mix_h)
 
     def circuit(self, gammas, betas):
@@ -53,8 +42,9 @@ class QAOA_circuit:
  
     def cost_function(self, params):
         gammas, betas = params
-        return self.qnode(gammas, betas)
-    
+        probs = self.prob_qnode(gammas, betas)
+        return np.dot(probs, self.costs)
+     
     def distribution(self, params, as_dict=False):   # NEW
         """
         Return computational basis probabilities:
@@ -87,8 +77,7 @@ class ChebyshevOptimizer:
         """
         AdamOptimizer turned out to work out a lot better than plane gradient GradientDescent!
         The JPMorgan paper relied on gradient free BOBYQA optimization (they also used the Approxmation Ratio
-        directly as their objective function). So if optimization turns out to be an issue
-        for optimizing the cost function of the UC problem, we can come back here later on...
+        directly as their objective function). 
         """
         self.optimizer = qml.AdamOptimizer(stepsize)
 
@@ -100,8 +89,6 @@ class ChebyshevOptimizer:
         ----------
         gammas : list-like
         betas : list-like
-        num_coeffs : int
-            p // 2 is recommended
 
         Returns
         -------
@@ -131,7 +118,8 @@ class ChebyshevOptimizer:
         """
         
         assert len(u) == len(v)
-        fit_interval = np.linspace(-1, 1, self.qaoa_circuit.p)
+        fit_interval = np.linspace(-1, 1, self.qaoa_circuit.p) # -1 to 1 because Cbebyshev polynomials are stable on that domain
+        # we can generally obtain negative parameters that way, but that's okay.
         gamma = np.polynomial.chebyshev.chebval(fit_interval, u)
         beta = np.polynomial.chebyshev.chebval(fit_interval, v)
         return gamma, beta
@@ -139,9 +127,6 @@ class ChebyshevOptimizer:
     def wrapped_cost_function(self, coeffs):
         u, v = coeffs 
         gammas, betas = self.to_angles(u, v)
-        """
-        !!! remove -1 for UC problem, just flipped here for maxcut
-        """
         return self.qaoa_circuit.cost_function((gammas, betas))
 
     def step(self, coeffs):
@@ -200,17 +185,6 @@ class IterativeInterpolation:
         return (gammas, betas)
     
     def run(self):
-        '''
-        To Do:
-            - read paper and their code to check weather my understanding is correct (also of _pad and _interpolate)
-            - potential problems: {-requires_grad is part of pennylane.numpy, not normal numpy, 
-                - rn delta is absolute not relative, - are coefficients even differentiable? - rebuild qaoa w/ p0 before loop}
-            - Test optimization with MaxCut Problem
-            - Opt. Compare to plain 2p gradient descent
-            - Clean up / delete other files (check in with Moritz)
-            - Push to main branch
-            - Even later: test other (oolder) classes
-        '''
         c_pat = 0 # initialize patience counter
         p = self.p0
         AR_old, AR_current = 0.0, 0.0 #
@@ -219,19 +193,15 @@ class IterativeInterpolation:
         gammas, betas = self.init_params # initial parameters of circuit with depth p0
         
         while p <= self.p_max and AR_current < self.target_AR: #and i <= self.max_iter:
-            print(f'>> II: p={p} of {self.p_max}, AR_curent={AR_current}')
+            print(f'>> II: p={p} of {self.p_max}, AR_curent={AR_current}', flush=True)
             u, v = self.cheby_optimizer.to_chebyshev(gammas, betas) # transform (gamma^p, beta^p) to functional basis
             coeffs = qml.numpy.array([u, v], requires_grad=True)
            # initialize parameters?    
-            print('    >> Start Chebyshev Opt.')
+            print('    >> Start Chebyshev Opt.', flush=True)
             for _ in range(self.opt_steps): # optimize the first C coefficients
                 coeffs = self.cheby_optimizer.step(coeffs)
             u, v = coeffs
-            print('    >> End Chebyshev Opt.')
-            # current energy
-            #gammas, betas = self.cheby_optimizer.to_angles(u, v)
-            #energy = self.qaoa_circuit.cost_function((gammas, betas))
-            #AR_current = self.approximation_ratio(energy)
+            print('    >> End Chebyshev Opt.', flush=True)
             energy = self.cheby_optimizer.wrapped_cost_function((u, v))
             AR_current = self.approximation_ratio(energy)
             delta = 0 if AR_old == 0 else np.abs((AR_current-AR_old)/AR_old) # compute relative performance increase
