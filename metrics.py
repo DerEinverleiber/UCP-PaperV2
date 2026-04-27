@@ -25,7 +25,7 @@ def min_tts(p_star: np.ndarray, l_p: np.ndarray = None, return_tts_p = False, ax
     if return_tts_p:
         return p_min_0_based + 1, min_values, tts_p_
 
-    return p_min_0_based + 1, tts_p[p_min_0_based]
+    return min_values
 
 def raar_qaoa(bf_file, params_file):
     df = pd.read_csv(bf_file)
