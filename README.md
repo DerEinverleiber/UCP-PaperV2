@@ -67,7 +67,7 @@ Plots used in the paper can be reproduced by running all cells in `qaoa_plots.ip
 
 **QAR-Lab, LMU Munich & Aqarios GmbH**
 
-Jonas Stein · Jannis Lutz (@DerEinverleiber) · Moritz Solderer (@moritzsoelderer) · Maximilian Adler · Michael Lachner · David Bucher · Claudia Linnhoff-Popien
+Jonas Stein · Jannis Lutz ([@DerEinverleiber](https://github.com/DerEinverleiber)) · Moritz Solderer ([@moritzsoelderer](https://github.com/moritzsoelderer)) · Maximilian Adler · Michael Lachner · David Bucher · Claudia Linnhoff-Popien
 
 Correspondence: [jonas.stein@ifi.lmu.de](mailto:jonas.stein@ifi.lmu.de)
 
