@@ -62,21 +62,6 @@ Plots used in the paper can be reproduced by running all cells in `qaoa_plots.ip
 
 ---
 
-## Citation
-
-```bibtex
-@inproceedings{stein2026qusopower,
-  title     = {Scaling Quantum Simulation-Based Optimization:
-               Demonstrating Efficient Power Grid Management with Deep QAOA Circuits},
-  author    = {Stein, Jonas and Lutz, Jannis and Solderer, Moritz
-               and Adler, Maximilian and Lachner, Michael
-               and Bucher, David and Linnhoff-Popien, Claudia},
-  booktitle = {IEEE International Conference on Quantum Computing and Engineering (QCE)},
-  year      = {2026}
-}
-```
-
----
 
 ## Authors
 
