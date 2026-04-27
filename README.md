@@ -1,30 +1,93 @@
-# UCP-Paper V2
-IEEE 57-system benchmarking data (incl. explanation of data format) taken from https://labs.ece.uw.edu/pstca/
+# Scaling Quantum Simulation-Based Optimization
+### Demonstrating Efficient Power Grid Management with Deep QAOA Circuits
 
-### paper_results.ipynb
-Contains main findings / Plots of paper and shows how to use the attached python files
+Code accompanying the paper *Scaling Quantum Simulation-Based Optimization: Demonstrating Efficient Power Grid Management with Deep QAOA Circuits*, submitted to IEEE QCE 2026. This repository benchmarks the optimization component of a QAOA-based Quantum Simulation-based Optimization (QuSO) solver against simulated annealing on randomly generated power grid instances.
 
-### powergrid.py
-Contains PowerGrid class, loss function 
+| Avg. RAAR | Max qubits | Max initial QAOA layers |
+|-----------|------------|--------------------------|
+| 69%       | 14         | 128                      |
 
-### q_optimizer.py
-Will contain implementation of Quantum Optimizer
-### cl_optimizer.py
-Will contain implementation of Classical Optimizer
+---
 
-### brute_force.py
-Contains brute force candidate space exploration
+## Installation
 
-### convert_data.py
-Only serves purpose of dealing with IEEE57 data. Currently it only works partially.
-Can be improved if needed but works for now.
+```bash
+pip install pennylane numpy scipy matplotlib
+```
 
-### data/bus_data_short.csv 
-IEEE57 data which is used for busses
+---
 
-### data/ieee57_branch.csv 
-IEEE57 data used for branches. csv was created using `convert_data.py`
+## Quickstart
 
-### data/ieee57_bus.csv 
-**Do not use**
-IEEE57 data for buses which is not yet correctly exported as csv, due to incomplete implementation of `convert_data.py`
+To reproduce the main benchmark results, first generate power grid instances and precompute cost values, then run the QAOA parameter training, and finally collect results:
+
+```bash
+python qaoa_calc_parameters.py
+python qaoa_calc_results.py
+```
+
+Plots used in the paper can be reproduced by running all cells in `qaoa_plots.ipynb` and `cl_optimizer_plots.ipynb`.
+
+---
+
+## Repository Structure
+
+### Core modules
+
+| File | Description |
+|------|-------------|
+| `qaoa_pipeline.py` | QAOA circuit construction and iterative interpolation parameter training [(Apte et al.)](https://arxiv.org/abs/2504.01694) |
+| `powergrid.py` | Random power grid generation (DC approximation), used as benchmark instances |
+| `metrics.py` | RAAR and TTS* implementations for QAOA and simulated annealing |
+| `brute_force.py` | Exhaustive cost function evaluation over the full solution space |
+| `qaoa_calc_parameters.py` | Trains QAOA angles via iterative interpolation |
+| `qaoa_calc_results.py` | Computes RAAR and TTS* from trained parameters |
+
+### Notebooks
+
+| File | Description |
+|------|-------------|
+| `qaoa_plots.ipynb` | Generates all QAOA figures used in the paper |
+| `cl_optimizer_plots.ipynb` | Generates all simulated annealing figures used in the paper |
+
+<details>
+<summary>Legacy notebooks (potentially outdated)</summary>
+
+| File | Description |
+|------|-------------|
+| `test_powergrid.ipynb` | Justifies using randomly generated power grids rather than the IEEE 57-bus dataset. Also contains testing of the cost function. |
+| `test_qaoa_maxcut.ipynb` | Sanity-checks `qaoa_pipeline.py` on the MaxCut problem |
+
+</details>
+
+---
+
+## Citation
+
+```bibtex
+@inproceedings{stein2026qusopower,
+  title     = {Scaling Quantum Simulation-Based Optimization:
+               Demonstrating Efficient Power Grid Management with Deep QAOA Circuits},
+  author    = {Stein, Jonas and Lutz, Jannis and Solderer, Moritz
+               and Adler, Maximilian and Lachner, Michael
+               and Bucher, David and Linnhoff-Popien, Claudia},
+  booktitle = {IEEE International Conference on Quantum Computing and Engineering (QCE)},
+  year      = {2026}
+}
+```
+
+---
+
+## Authors
+
+**QAR-Lab, LMU Munich & Aqarios GmbH**
+
+Jonas Stein · Jannis Lutz (@DerEinverleiber) · Moritz Solderer (@moritzsoelderer) · Maximilian Adler · Michael Lachner · David Bucher · Claudia Linnhoff-Popien
+
+Correspondence: [jonas.stein@ifi.lmu.de](mailto:jonas.stein@ifi.lmu.de)
+
+---
+
+## Acknowledgements
+
+Supported by the LMU Sustainability Fund (EfOiE), BMFTR (QuCUN, QuaRDS, CAQAO), Munich Quantum Valley (K5, K7), and Bavarian StMWi (6GQT).
