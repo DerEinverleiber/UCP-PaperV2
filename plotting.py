@@ -39,7 +39,7 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         color=color,
         alpha=0.7,
         linewidth=1.6,
-        label=plot_label if plot_label else None
+        label=plot_label
     )
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
@@ -49,6 +49,9 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         reg_logx = True if regplot == 'log' else False
         sns.regplot(x=xs, y=means, color=color, ax=ax, line_kws={'linestyle': "--", 'linewidth': 1.0}, ci=None,
                     logx=reg_logx, dropna=True)
+
+    if plot_label:
+        ax.legend()
 
 def plot_per_label(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
                    line_labels: list[str], labels: tuple[str, str], palette: list[tuple[float, float, float]],
