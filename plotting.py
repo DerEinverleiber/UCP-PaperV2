@@ -195,7 +195,7 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
         arg = np.clip(arg, 1e-10, None)  # prevent log of zero or negative
         return a * (np.log(arg) / np.log(n)) + d
 
-    for i, (load_factor, mean, std, log_mean_clipped) in enumerate(zip(load_factors, means, stds, log_means_clipped)):
+    for i, (mean, std, log_mean_clipped) in enumerate(zip(means, stds, log_means_clipped)):
         ax.plot(
             xs,
             mean,
