@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 
 def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, labels: tuple[str, str],
                        color: tuple[float, float, float], regplot: bool | str = False, set_xticks: bool = False, logy: bool = False,
-                       ylim: tuple[float, float] = None):
+                       ylim: tuple[float, float] = None, plot_label: str = None):
     if ylim is not None:
         ax.set_ylim(*ylim)
 
@@ -37,7 +37,8 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         capsize=3,
         color=color,
         alpha=0.7,
-        linewidth=1.6
+        linewidth=1.6,
+        label=plot_label if plot_label else None
     )
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
