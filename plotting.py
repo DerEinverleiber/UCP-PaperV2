@@ -17,15 +17,6 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         means = means[mask]
         stds = stds[mask]
 
-    ax.plot(
-        xs,
-        means,
-        alpha=0.7,
-        linewidth=1.6,
-        markersize=3.5,
-        color=color
-    )
-
     if set_xticks:
         ax.set_xticks(xs)
 
@@ -33,12 +24,9 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
         xs,
         y=means,
         yerr=stds,
-        fmt="none",
         ls='-',
         capsize=3,
         color=color,
-        alpha=0.7,
-        linewidth=1.6,
         label=plot_label
     )
     ax.set_ylabel(labels[0])
@@ -70,15 +58,6 @@ def plot_per_label(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
 
     for i, (line_label, mean, std) in enumerate(zip(line_labels, means, stds)):
 
-        ax.plot(
-            xs,
-            mean,
-            alpha=0.7,
-            linewidth=1.6,
-            markersize=3.5,
-            color=palette[i],
-        )
-
         if set_xticks:
             ax.set_xticks(xs)
 
@@ -86,12 +65,9 @@ def plot_per_label(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
             xs,
             y=mean,
             yerr=std,
-            fmt="none",
             ls='-',
             capsize=3,
             color=palette[i],
-            alpha=0.7,
-            linewidth=1.6,
             label=line_label
         )
 
@@ -124,15 +100,6 @@ def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
         arg = np.clip(arg, 1e-10, None)  # prevent log of zero or negative
         return a * (np.log(arg) / np.log(n)) + d
 
-    ax.plot(
-        xs,
-        means,
-        alpha=0.7,
-        linewidth=1.6,
-        markersize=3.5,
-        color=palette[0],
-    )
-
     if set_xticks:
         ax.set_xticks(xs)
 
@@ -141,12 +108,9 @@ def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
         xs,
         y=means,
         yerr=[means - lower, stds], # prevent -inf values do to log scale
-        fmt="none",
         ls='-',
         capsize=3,
         color=palette[0],
-        alpha=0.7,
-        linewidth=1.6
     )
 
     popt_linear, pcov_linear = curve_fit(f=linear_model, xdata=xs, ydata=log_mean_clipped, nan_policy='omit')
@@ -199,15 +163,6 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
         return a * (np.log(arg) / np.log(n)) + d
 
     for i, (mean, std, log_mean_clipped) in enumerate(zip(means, stds, log_means_clipped)):
-        ax.plot(
-            xs,
-            mean,
-            alpha=0.7,
-            linewidth=1.6,
-            markersize=3.5,
-            color=palette[i],
-        )
-
         if set_xticks:
             ax.set_xticks(xs)
 
@@ -216,12 +171,9 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
             xs,
             y=mean,
             yerr=[mean - lower, std], # prevent -inf values do to log scale
-            fmt="none",
             ls='-',
             capsize=3,
             color=palette[i],
-            alpha=0.7,
-            linewidth=1.6,
             label=line_labels[i] if line_labels else None
         )
 
