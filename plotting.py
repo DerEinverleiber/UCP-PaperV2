@@ -83,8 +83,11 @@ def plot_per_label(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
 
 
 def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
-                    labels: tuple[str, str], palette: list[tuple[float, float, float]], set_xticks: bool = False) -> None:
+                    labels: tuple[str, str], palette: list[tuple[float, float, float]], set_xticks: bool = False, ylim = None) -> None:
     ax.set_yscale('log')
+
+    if ylim is not None:
+        ax.set_ylim(*ylim)
 
     mask = np.isfinite(means)
     means = means.clip(min=1)[mask] # clip for log scale
@@ -145,8 +148,11 @@ def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
 
 def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
                          labels: tuple[str, str], palette: list[tuple[float, float, float]], set_xticks: bool = False,
-                                       line_labels: list[str] = None) -> None:
+                                       line_labels: list[str] = None, ylim = None) -> None:
     ax.set_yscale('log')
+
+    if ylim is not None:
+        ax.set_ylim(*ylim)
 
     mask = np.isfinite(means).all(axis=0)
     means = means.clip(min=1)[:, mask] # clip for log scale
