@@ -33,6 +33,43 @@ def set_my_style(use_latex: bool = True):
         "figure.dpi": 150,
         "axes.grid": True,
         "axes.grid.which": "both",
+        "axes.labelsize": 11,
+        "axes.titlesize": 13,
+        "axes.linewidth": 1.0,
+        "axes.edgecolor": "#333333",
+        "lines.markersize": 4,
+        "lines.linewidth": 1.3,
+        "grid.color": "#E0E0E0",
+        "grid.linewidth": 0.5,
+        "grid.linestyle": "--",
+        "grid.alpha": 0.8,
+        "xtick.direction": "in",
+        "ytick.direction": "in",
+        "xtick.major.size": 3.5,
+        "ytick.major.size": 3.5,
+        "xtick.minor.size": 1.5,
+        "xtick.minor.visible": True,
+        "ytick.minor.size": 1.5,
+        "ytick.minor.visible": True,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.frameon": True,
+        "legend.framealpha": 0.9,
+        "legend.fontsize": 7,
+        "legend.title_fontsize": 9,
+        "legend.edgecolor": "#E0E0E0",
+        "legend.fancybox": True,
+        "savefig.bbox": "tight",
+        "savefig.pad_inches": 0.1,
+        "savefig.dpi": 300,
+        **font_style,
+    }
+    '''old style settings
+    my_style = {
+        "figure.figsize": (4, 2.5),
+        "figure.dpi": 150,
+        "axes.grid": True,
+        "axes.grid.which": "both",
         "axes.labelsize": 8,
         "axes.titlesize": 10,
         "axes.linewidth": 0.8,
@@ -64,7 +101,7 @@ def set_my_style(use_latex: bool = True):
         "savefig.dpi": 300,
         **font_style,
     }
-
+    '''
 
     # Apply the style
     # default_rc = mpl.rcParamsDefault
@@ -93,5 +130,3 @@ def shades(num: int | None, col_idx: int = 0, offset: int = 0):
 def diverging(col_idxs: tuple[int, int] | None, central: str | None = None):
     if col_idxs is None:
         col_idxs = (0, 1)
-
-
