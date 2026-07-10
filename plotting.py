@@ -31,7 +31,6 @@ def plot_with_errorbar(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray, 
     )
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
-    ax.grid(visible=True)
 
     if regplot:
         reg_logx = True if regplot == 'log' else False
@@ -78,7 +77,6 @@ def plot_per_label(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
 
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
-    ax.grid(visible=True)
     ax.legend()
 
 
@@ -142,7 +140,6 @@ def log_plot_with_fits(ax, xs: np.ndarray, means: np.ndarray, stds: np.ndarray,
 
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
-    ax.grid(visible=True)
     ax.legend()
 
 
@@ -209,5 +206,4 @@ def log_plot_per_load_factor_with_fits(ax, xs: np.ndarray, means: np.ndarray, st
 
     ax.set_ylabel(labels[0])
     ax.set_xlabel(labels[1])
-    ax.grid(visible=True)
     ax.legend()
